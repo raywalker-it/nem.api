@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Australian National Energy Market Power Generation History :: raywalker.IT</title>
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="stylesheet" href="css/main.css">
+        <link href='//fonts.googleapis.com/css?family=Open+Sans:400,600,700,300' rel='stylesheet' type='text/css'>
+        
+        <script src="js/vendor/modernizr.min.js"></script>
+        
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+        <div class="header-container">
+            <header class="wrapper clearfix">
+                <h1 class="title">National Energy Market Generation History</h1>
+                <!--                <nav>
+                                    <ul>
+                                        <li><a href="#">nav ul li a</a></li>
+                                        <li><a href="#">nav ul li a</a></li>
+                                        <li><a href="#">nav ul li a</a></li>
+                                    </ul>
+                                </nav>-->
+            </header>
+            
+        </div>
+        <nav id="sticky">
+                <ul class="pagination">
+                    <li>
+                        <a href="#page-previous" title="Previous interval">Previous page</a> 
+                        <a href="#page-next" title="Previous interval">Next page</a>
+                    </li>
+                    <li>
+                        <a class="today" href="#today">
+                            Today
+                        </a>
+                    </li>
+                    <li>
+                        <a class="days-1" href="#days-1" title="Chart duration: 1 day">1 day</a>
+                        <a class="days-3" href="#days-3" title="Chart duration: 3 days">3 days</a>
+                        <a class="days-7" href="#days-7" title="Chart duration: 7 days">7 days</a>
+                    </li>
+                    <li>
+                        <a class="live" href="#live" title="Enable live updates">
+                            Live
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        <div class="main-container">
+            <div class="main wrapper clearfix">
+
+                <article id="dashboard">
+                    <header>
+                        <h1>Dashboard</h1>
+                    </header>
+
+                    <section id="states">
+                        <h2>Aggregate power generation by state</h2>
+                        <p></p>
+                        <div class="chart" id="VIC1" data-name="Victoria"></div>
+                        <div class="chart" id="TAS1" data-name="Tasmania" ></div>
+                        <div class="chart" id="NSW1" data-name="New South Wales" ></div>
+                        <div class="chart" id="QLD1" data-name="Queensland" ></div>
+                        <div class="chart" id="SA1" data-name="South Australia" ></div>
+                        <!--<div class="chart" id="WA1" ></div>-->
+                        <!--<div class="chart" id="NT1" ></div>-->
+                        <div class="chart" id="ACT1" data-name="Australian Captial Territory" ></div>
+                        
+                        <footer>
+                            <h2></h2>
+                            <p>
+                                Work in progress<br/>
+                                There are holes in the NEM registration data I'm currently using which cause certain generators to not register in data or to register as incorrect types.  This is software under active development and these issues will be resolved soon<sup>TM</sup>.
+                            </p>
+                            <div id="na_debug" class="debug">
+                                
+                            </div>
+                        </footer>
+                        
+                    </section>
+<!--                    
+                    <section>
+                        <h2>Percentage power generation by state</h2>
+                        <div id="state_percentage" class="chart"></div>
+                    </section>-->
+                    
+                    <footer>
+                        <h3>Additional resources</h3>
+                        <p>Data from <a href="http://www.aemo.com.au/">Australian Energy Market Operator</a>, at <a href="http://www.nemweb.com.au/Reports">http://www.nemweb.com.au/Reports</a></p>
+                    </footer>
+                </article>
+                <aside>
+                    <h3>Totals</h3>
+                    <div id="totals" class="chart"></div>
+                </aside>
+                <aside>
+                    <h3>API</h3>
+                    <p><a href="/api/v1.0/scada">https://nem.raywalker.it/api/v1.0/scada</a>
+                    <dl>
+                        <dt><strong>time_start</strong> or <strong>start_time</strong></dt>
+                        <dd>Generation results from this date. Any standard timestring or unix timestamp is accepted</dd>
+                        <dt><strong>time_end</strong> or <strong>end_time</strong></dt>
+                        <dd>Generation results up to and including this date. And standard timestring or unix timestamp is accepted</dd>
+                        <dt><strong>days</strong> or <strong>weeks</strong> or <strong>months</strong> or <strong>hours</strong></dt>
+                        <dd>Show results from this interval.  If used with time_start, then it will show results from that date to the future, if used with time_end it will show days preceeding that date</dd>
+                        <dd>Examples include:
+                            <ul>
+                                <li>
+                                    <a href="?days=7&amp;time_start=2014-12-20">?days=7&amp;time_start=2014-12-20</a><br/>
+                                    Retrieve all values for 7 days from the 20th December 2014 
+                                </li>
+                                <li>
+                                    <a href="/?hours=1&amp;end_time=2014-03-01T11:00Z">?hours=1&amp;end_time=2014-03-01T11:00Z</a><br/>
+                                    All results from 1st March 2014, 11am UTC
+                                </li>
+                            </ul>
+                        </dd>
+                            <dt><strong>fuel</strong></dt>
+                        <dd>Biomass, Fossil, Fuel Oil, Hydro, Renewable, Renewable/ Biomass / Waste, Solar, Wind</dd>
+                        <dt><strong>tech</strong></dt>
+                        <dd>Combustion, Renewable, Wind</dd>
+                        <dt><strong>fuel_desc</strong></dt>
+                        <dd>Bagasse, Black Coal, Brown Coal, Coal Seam Methane, Coal Tailings, Diesel, Kerosene, Natural Gas, Natural Gas / Diesel, Natural Gas / Fuel Oil, Waste Coal Mine Gas, Hydro, Water, Landfill Gas, Landfill Methane / Landfill Gas, Macadamia Nut Shells, Sewerage/Waste Water, Solar PV, Wind</dd>
+                        <dt><strong>state</strong></dt>
+                        <dd>ACT1, NSW1, QLD1, SA1, TAS1, VIC1</dd>
+                        <dt>company</dt>
+                        <dd>
+                            EnergyAustralia Pty Ltd
+                            AGL Hydro Partnership
+                            EnerNOC Pty Ltd
+                            Infratil Energy Australia Pty Ltd
+                            State Electricity Commission (Vic)
+                            Ergon Energy Queensland Pty Ltd
+                            Stanwell Corporation Limited
+                            Hydro-Electric Corporation trading as Hydro Tasmania
+                            Aurora Energy (Tamar Valley) Pty Ltd trading as AETV Power
+                            Basslink Pty Ltd
+                            Snowy Hydro Limited
+                            EDL LFG (Qld) Pty Ltd
+                            Braemar Power Project Pty Ltd
+                            NewGen Braemar 2 Partnership
+                            EDL LFG (Vic) Pty Ltd
+                            Green State Power Pty Ltd
+                            Macquarie Generation
+                            Cape Byron Management Pty Ltd
+                            CS Energy Limited
+                            Infigen Energy Markets Pty Limited
+                            Cathedral Rocks Wind Farm Pty Ltd
+                            Infigen Energy  Holdings Pty Ltd
+                            Delta Electricity
+                            Pacific Hydro Clements Gap Pty Ltd
+                            EDL LFG (VIC) Pty Ltd
+                            Callide Power Trading Pty Limited
+                            QGC Sales Qld Pty Ltd
+                            Origin Energy Electricity Limited
+                            Synergen Power Pty Limited
+                            EDL LFG (NSW) Pty Ltd
+                            Pacific Hydro Investments Pty Ltd
+                            Essential Energy
+                            EDL CSM (QLD) Pty Ltd
+                            AGL Sales (Queensland Electricity) Pty Limited
+                            Gullen Range Wind Farm Pty Ltd
+                            Gunning Wind Energy Developments Pty Ltd
+                            Lumo Energy Australia Pty Ltd
+                            Red Energy Pty Limited
+                            EDL LFG (SA) Pty Ltd
+                            Progressive Green Pty Ltd
+                            Hazelwood Power
+                            Wilmar Sugar Pty Ltd
+                            Ecogen Energy Pty Ltd
+                            Lake Bonney Wind Power Pty Ltd
+                            IPM Australia Limited
+                            AGL Loy Yang Marketing Pty Ltd
+                            EDL Projects (Australia) Pty Ltd
+                            Mt Mercer Windfarm Pty Ltd
+                            Tasmanian Irrigation Pty Ltd
+                            Mortons Lane Windfarm Pty Limited
+                            Energy Brix Australia Corporation Pty Ltd
+                            Millmerran Energy Trader Pty Ltd
+                            Mt Millar Wind Farm Pty Ltd
+                            Flinders Operating Services Pty Ltd
+                            Pelican Point Power Limited
+                            Redbank Project Pty Limited
+                            FRV Royalla Solar Farm Pty Ltd
+                            FPC 30 Limited (as Trustee for the FPC Green Trust)
+                            Diamond Energy Pty Ltd
+                            Marubeni Australia Power Services Pty Ltd
+                            Snowtown Wind Farm Stage 2 Pty ltd
+                            Snowtown Wind Farm Pty Ltd
+                            Starfish Hill Wind Farm Pty Ltd
+                            Secure Energy Pty Ltd
+                            EnviroGen Pty Limited
+                            NovaPower Pty Ltd
+                            Veolia Environmental Services (Australia) Pty Ltd
+                            Toora Wind Farm Pty Ltd
+                            AGL SA Generation Pty Limited
+                            Origin Energy Uranquinty Power Pty Ltd
+                            Waterloo Wind Farm Pty Ltd
+                            Pyrenees Wind Energy Development Pty Ltd
+                            Windy Hill Wind Farm Pty Ltd
+                            Woodlawn Wind Pty Ltd
+                            Energy Pacific (Vic) Pty Ltd
+                            RTA Yarwun Pty Ltd
+                            EnergyAustralia Yallourn Pty Ltd
+                        </dd>
+                    </dl>
+                </aside>
+            </div> <!-- #main -->
+        </div> <!-- #main-container -->
+
+        <div class="footer-container">
+            <footer class="wrapper">
+                <h3>More information</h3>
+                <p>
+                    API and interface by <a href="https://raywalker.it">raywalker.IT</a>
+                </p>
+                
+                <h3>Thanks</h3>
+                <p>With thanks to <a href="https://twitter.com/KetanJ0">Ketan Joshi</a> and <a href="https://twitter.com/ozjimbob">Grant Williamson</a></p>
+            </footer>
+        </div>
+
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.11.0.min.js"><\/script>')</script>
+
+        <script src="js/plugins.js"></script>
+        <script src="js/index.js"></script>
+
+        <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
+        <!--        <script>
+                    (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
+                    function(){(b[l].q=b[l].q||[]).push(arguments)});b[l].l=+new Date;
+                    e=o.createElement(i);r=o.getElementsByTagName(i)[0];
+                    e.src='//www.google-analytics.com/analytics.js';
+                    r.parentNode.insertBefore(e,r)}(window,document,'script','ga'));
+                    ga('create','UA-XXXXX-X');ga('send','pageview');
+                </script>-->
+    </body>
+</html>

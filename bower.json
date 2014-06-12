@@ -1,0 +1,28 @@
+{
+  "name": "Renewables",
+  "version": "0.1.0",
+  "authors": [
+    "Ray Walker <geek@raywalker.it>"
+  ],
+  "description": "Graphing current renewable energy generation",
+  "moduleType": [
+    "globals"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "jquery": "~2.1.1",
+    "moment": "~2.6.0"
+  },
+  "dependencies": {
+    "normalize-scss": "~3.0.1",
+    "lodash": "~2.4.1",
+    "uri.js": "~1.13.2"
+  }
+}

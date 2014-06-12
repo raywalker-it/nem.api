@@ -1,0 +1,30 @@
+{
+    "user": "fish",
+    "group": "fish",
+    "listen": {
+        "host": "127.0.0.1",
+        "port": 8080
+    },
+    "ssl": {
+        "enabled": false,
+        "certificate": "",
+        "key": ""
+    },
+    "scrape": {
+        "current": "http://www.nemweb.com.au/Reports/CURRENT/Dispatch_SCADA/",
+        "archive": "http://www.nemweb.com.au/Reports/ARCHIVE/Dispatch_SCADA/"
+    },
+    "db": {
+        "sqlite": "/var/www/nem.raywalker.it/db/scada.db",
+        "schema": "/var/www/nem.raywalker.it/project/api/db/schema.sql",
+        "registration_file": "/var/www/nem.raywalker.it/files/NEM_Registration_and_Exemption_List_20140508.csv",
+        "pragma": {
+            "busy_timeout": 60000,
+            "foreign_keys": "ON",
+            "journal_mode": "WAL",
+            "synchronous": "0",
+            "cache_size": "-800000",
+            "page_size": "8192"
+        }
+    }
+}
