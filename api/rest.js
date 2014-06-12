@@ -26,7 +26,7 @@
     'use strict';
 
     var fs = require('fs'),
-        config = JSON.parse(fs.readFileSync('./config.json', 'utf-8'));
+        config = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf-8'));
 
     try {
         //        console.log('Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
