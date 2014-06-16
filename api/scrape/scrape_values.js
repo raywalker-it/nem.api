@@ -29,6 +29,7 @@
     var simulate = false;
     var debug = false;
     var verbose = false;
+    var cron = false;
 
     var archive_mode = false;
     var reverse = true;
@@ -40,7 +41,7 @@
 
     var database = false;
 
-    var pragma = 'PRAGMA synchronous=0; PRAGMA cache_size=-512384; PRAGMA page_size=65536; PRAGMA automatic_index=OFF;';
+    var default_pragma = 'PRAGMA automatic_index=OFF;';
 
     var start_time = 0;
 
@@ -61,6 +62,10 @@
                 case '-h':
                     console.log('Usage: scada.js [options] [http://scrape.url/] [path/to/sqlite/database.db]');
                     process.exit(1);
+                    break;
+
+                case '--cron':
+                    cron = true;
                     break;
 
                 case '--debug':
@@ -113,10 +118,10 @@
                     break;
 
                 default:
-                    if (argument.match(/http/gi)) {
+                    if (argument.match(/^http/gi)) {
                         scrape_uri = argument;
                     }
-                    if (argument.match(/\.db/i)) {
+                    if (argument.match(/\.db$/i)) {
                         database = argument;
                     }
             }
@@ -133,21 +138,9 @@
         }
     }
 
-    // Drop privileges, run as configured user
-    try {
-        if (!config.user || !config.group) {
-            throw new Error('No user or group specified, not assuming anything');
-        }
+    var user = require(path.resolve(__dirname,'..','user.js'));
 
-        if (config.user === 'root' || config.group === 'root') {
-            throw new Error('Cowardly refusing to run as superuser');
-        }
-        process.setgid(config.user);
-        process.setuid(config.group);
-    } catch (err) {
-        console.error(err, "/nRunning away!");
-        process.exit(1);
-    }
+    user.privileges(config.user, config.group);
 
     // If no database file was passed in command line parameters
     if (!database) {
@@ -158,9 +151,14 @@
             console.error('Database is not defined, exiting');
             process.exit(1);
         }
+
+        if (database.indexOf('/') !== 0 && database.indexOf('..') !== 0) {
+            // not an absolute path, assume it's relative to the config file
+            database = path.resolve(__dirname, '..', database);
+        }
     }
 
-    //
+
     if (!scrape_uri) {
         if (archive_mode) {
             scrape_uri = config.scrape.archive;
@@ -199,7 +197,7 @@
 
     Q.longStackSupport = true;
 
-//var CronJob = require('cron').CronJob;
+    //var CronJob = require('cron').CronJob;
 
     (function() {
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round?redirectlocale=en-US&redirectslug=JavaScript%2FReference%2FGlobal_Objects%2FMath%2Fround
@@ -818,6 +816,35 @@
         });
     }
 
+    function execPragma() {
+         var q = Q.defer(),
+            i = 0,
+            len = Object.keys(config.db.pragma).length;
+
+        _.forIn(config.db.pragma, function(val, key) {
+            var sql = 'PRAGMA ' + key + ' = ' + val + ';';
+
+            db.exec(sql, function(err) {
+                if (err) {
+                    console.error(err);
+                }
+
+                if (++i === len) {
+                    console.log('done');
+                    db.exec(default_pragma, function (err) {
+                        if (err) {
+                            console.error(err);
+                        }
+                        return q.resolve();
+                    });
+                }
+            });
+
+        });
+
+        return q.promise;
+    }
+
     function done() {
         shutting_down = true;
         checkExit();
@@ -835,7 +862,9 @@
 //            pragma += 'PRAGMA ' + key + '=' + val + '; ';
 //        });
 
-        return db.exec(pragma, function() {
+
+
+        return execPragma().then(function() {
 
             return db.all('SELECT id, duid FROM generator', function(err, rows) {
 

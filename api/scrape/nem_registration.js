@@ -25,13 +25,11 @@
  */
 /*jslint node:true */
 
-(function(require) {
+(function() {
     'use strict';
 
     var delete_tables = false,
-//        simulate = false,
-        debug = false,
-        pragma = 'PRAGMA busy_timeout = 600; PRAGMA foreign_keys = ON; PRAGMA temp_store = MEMORY; PRAGMA synchronous = FULL; PRAGMA journal_mode = WAL; PRAGMA cache_size = -512000;';
+        debug = false;
 
     var registration_file = false,
         database = false,
@@ -138,20 +136,9 @@
     }
 
     // Drop privileges, run as configured user
-    try {
-        if (!config.user || !config.group) {
-            throw new Error('No user or group specified, not assuming anything');
-        }
+    var user = require(path.resolve(__dirname, '..', 'user.js'));
 
-        if (config.user === 'root' || config.group === 'root') {
-            throw new Error('Cowardly refusing to run as superuser');
-        }
-        process.setgid(config.user);
-        process.setuid(config.group);
-    } catch (err) {
-        console.error(err);
-        process.exit(1);
-    }
+    user.privileges(config.user, config.group);
 
     // If no registration file was passed in command line parameters
     if (!registration_file) {
@@ -163,6 +150,7 @@
             process.exit(1);
         }
     }
+
     // If no database file was passed in command line parameters
     if (!database) {
         // Use configured database file
@@ -171,6 +159,12 @@
         if (!database) {
             console.error('Database is not defined, exiting');
             process.exit(1);
+        }
+
+        console.log(database);
+
+        if (database.indexOf('/') !== 0 && database.indexOf('.') !== 0) {
+            database = path.resolve(__dirname, '..', database);
         }
     }
 
@@ -183,12 +177,16 @@
             console.error('Schema is not defined, exiting');
             process.exit(1);
         }
+
+        if (schema_file.indexOf('/') !== 0 && schema_file.indexOf('.') !== 0) {
+            schema_file = path.resolve(__dirname, '..', schema_file);
+        }
     }
 
     // And now we begin
 
     var csv = require('csv'),
-        sqlite3 = require('sqlite3').verbose(),
+        sqlite3 = require('sqlite3'),
         db = new sqlite3.Database(database),
         _ = require('lodash'),
         Q = require('q'),
@@ -412,17 +410,12 @@
 
 // ===========================================================================
                 var tech, techID, participant;
-                try {
-                    tech = _.find(technologies, {type: trim(row[8]), description: trim(row[9])});
-                    techID = tech.id;
+                tech = _.find(technologies, {type: trim(row[8]), description: trim(row[9])});
+                techID = tech.id;
 
-                    if (!tech) {
-                        console.log('Tech not found');
-                        throw 'Technology not found ' + row[9];
-                    }
-                } catch (err) {
-                    console.error(err);
-                    process.exit(1);
+                if (!tech) {
+                    console.error('Tech not found');
+                    throw new Error('Technology not found ' + row[9]);
                 }
 
                 var fueldesc = trim(row[7]),
@@ -443,16 +436,10 @@
 //              Add generator if not exist
 
 // ===========================================================================
-                try {
-                    participant = _.find(participants, {name: trim(row[0])});
+                participant = _.find(participants, {name: trim(row[0])});
 
-                    if (!participant) {
-                        throw 'Participant not found: ' + row[0];
-                    }
-                } catch (err) {
-                    console.error(err);
-                    console.log(participants);
-                    process.exit(1);
+                if (!participant) {
+                    throw new Error('Participant not found: ' + row[0]);
                 }
 
                 var genname = trim(row[1]),
@@ -495,10 +482,8 @@
             console.log('Generators:\t', generators.length);
 
         } catch (err) {
-
             console.error(err);
             process.exit(1);
-
         }
 
 
@@ -511,15 +496,11 @@
 
             db.exec('BEGIN IMMEDIATE TRANSACTION');
 
-//            db.exec('DELETE FROM fuel; DELETE FROM generator');
-
             var st = db.prepare("INSERT INTO fuel (type, description, technology_id) VALUES (?,?,?)");
 
             _.each(fuels, function(f) {
                 return st.run([f.type, f.description, f.technology_id]);
             });
-
-//        console.log(generator[Math.round(Math.random() * generator.length - 1)]);
 
             st = db.prepare("INSERT INTO generator (name, state, duid, participant_id, technology_id, reg_cap, max_cap) VALUES (?,?,?,?,?,?,?)");
 
@@ -530,7 +511,7 @@
             st.finalize();
 
             return db.exec('COMMIT', function() {
-                deferred.resolve(generators);
+                return deferred.resolve(generators);
             });
         });
 
@@ -542,89 +523,124 @@
 
     }
 
+    function readRegistrationFile() {
+        var q = Q.defer();
+
+        if (registration_file.indexOf('/') !== 0 && registration_file.indexOf('..') !== 0) {
+            // not an absolute path, assume it's relative to the config file
+            registration_file = path.resolve(__dirname, '..', registration_file);
+        }
+
+        console.log('Registration\t', registration_file, '\n');
+
+        // assume base is application root
+        try {
+            fs.readFile(registration_file, {encoding: 'utf-8'}, function(err, data) {
+                if (err) {
+                    throw new Error(err);
+                }
+                q.resolve(data);
+            });
+        } catch (err) {
+            console.error(err);
+            process.exit(1);
+        }
+
+        return q.promise;
+    }
+
+    function initDB() {
+        var q = Q.defer(),
+            i = 0,
+            len = Object.keys(config.db.pragma).length;
+
+        _.forIn(config.db.pragma, function(val, key) {
+            var sql = 'PRAGMA ' + key + ' = ' + val + ';';
+
+
+            db.exec(sql, function(err) {
+
+                if (err) {
+                    console.error(err);
+                }
+
+                if (i === len) {
+                    return q.resolve();
+                }
+            });
+
+        });
+
+        return q.promise;
+    }
+
     /**
      * Read registration file and enters NEM registered generator into database
-     *
+     * @param {Function} next Callback
      * @returns {undefined}
      */
     function init(next) {
         start_time = new Date().getTime();
 
-        console.log('Database\t', database);
-        console.log('Registration\t', registration_file, '\n');
+        return Q.all([readRegistrationFile(), initDB()]).then(function(data) {
+            console.log('Database\t', database);
 
-        return fs.readFile(registration_file, "utf8", function(error, data) {
+            return phase1(data[0]).then(function(response) {
 
-            if (error) {
-                console.error(error);
-                process.exit(1);
-            }
+                return phase2(response[0], response[1], response[2]).then(function(generators) {
 
-            _.forIn(config.pragma, function(val, key) {
-                console.log(key, val);
-                pragma += ' PRAGMA ' + key + ' = ' + val + ';';
-            });
+                    /*
+                     "generator_id" INTEGER PRIMARY KEY,
+                     "name" TEXT NOT NULL,
+                     "duid" TEXT NOT NULL,
+                     "state" TEXT NOT NULL,
+                     "participant_name" TEXT NOT NULL,
+                     "technology_type" TEXT NOT NULL,
+                     "technology_description" TEXT,
+                     "fuel_type" TEXT NOT NULL,
+                     "fuel_description" TEXT,
+                     "reg_cap" REAL,
+                     "max_cap" REAL
+                     */
+                    return db.all('SELECT * FROM generator ORDER BY id', function(err, rows) {
 
-            return db.exec(pragma, function() {
+                        console.log('Refreshing flat_generators table ...');
 
-                return phase1(data).then(function(response) {
-                    //
-                    return phase2(response[0], response[1], response[2]).then(function(generators) {
+                        return db.serialize(function() {
+                            var i = 0;
 
-                        /*
-                         "generator_id" INTEGER PRIMARY KEY,
-                         "name" TEXT NOT NULL,
-                         "duid" TEXT NOT NULL,
-                         "state" TEXT NOT NULL,
-                         "participant_name" TEXT NOT NULL,
-                         "technology_type" TEXT NOT NULL,
-                         "technology_description" TEXT,
-                         "fuel_type" TEXT NOT NULL,
-                         "fuel_description" TEXT,
-                         "reg_cap" REAL,
-                         "max_cap" REAL
-                         */
-                        return db.all('SELECT * FROM generator ORDER BY id', function(err, rows) {
+                            db.exec('BEGIN IMMEDIATE TRANSACTION');
 
-                            console.log('Refreshing flat_generators table ...');
-
-                            return db.serialize(function() {
-                                var i = 0;
-
-                                db.exec('BEGIN IMMEDIATE TRANSACTION');
-
-                                var st = db.prepare('INSERT INTO flat_generators (generator_id,name,duid,state,participant_name,technology_type,technology_description,fuel_type,fuel_description,reg_cap,max_cap) VALUES (?,?,?,?,?,?,?,?,?,?,?)', function() {
-                                    console.log('Prepared');
-                                });
-
-                                _.each(rows, function(db_gen) {
-                                    var gen = generators[i++];
-                                    try {
-                                        return st.run([db_gen.id, gen.name, gen.duid, gen.state, gen.participant.name, gen.technology.type, gen.technology.description, gen.fuel.type, gen.fuel.description, gen.reg_cap, gen.max_cap]);
-                                    } catch (err) {
-                                        console.error(err);
-                                        process.exit(1);
-                                    }
-                                });
-
-                                st.finalize();
-
-                                return db.exec('COMMIT', function() {
-                                    return next();
-                                });
-
-                                // end update flat_generators
+                            var st = db.prepare('INSERT INTO flat_generators (generator_id,name,duid,state,participant_name,technology_type,technology_description,fuel_type,fuel_description,reg_cap,max_cap) VALUES (?,?,?,?,?,?,?,?,?,?,?)', function() {
+                                console.log('Prepared');
                             });
-                            // end select generator
+
+                            _.each(rows, function(db_gen) {
+                                var gen = generators[i++];
+                                try {
+                                    return st.run([db_gen.id, gen.name, gen.duid, gen.state, gen.participant.name, gen.technology.type, gen.technology.description, gen.fuel.type, gen.fuel.description, gen.reg_cap, gen.max_cap]);
+                                } catch (err) {
+                                    console.error(err);
+                                    process.exit(1);
+                                }
+                            });
+
+                            st.finalize();
+
+                            return db.exec('COMMIT', function() {
+                                return next();
+                            });
+
+                            // end update flat_generators
                         });
-                        // end phase2
+                        // end select generator
                     });
-                    // end phase1
+                    // end phase2
                 });
-                // end exec pragma
+                // end phase1
             });
-            // end readfile
         });
+        // end exec pragma
     }
 
     function onComplete() {
@@ -653,4 +669,4 @@
         return init(onComplete);
     }
 
-}(require));
+}());

@@ -75,23 +75,18 @@ module.exports = function(db, req, res, next) {
                 error: err
             });
         }
-        var count_vars = JSON.parse(JSON.stringify(val_vars)),
-            count_sql = sql.replace(/(SELECT.*?)\sFROM/, 'SELECT COUNT(*) AS total FROM').replace(/(LIMIT.*$)/, '');
+//        var count_vars = JSON.parse(JSON.stringify(val_vars)), // fastest way of copying object 'by value' instead of 'by reference'
+//            count_sql = sql.replace(/(SELECT.*?)\sFROM/, 'SELECT COUNT(*) AS total FROM').replace(/(LIMIT.*$)/, '');
+//
+//        delete(count_vars.$limit);
+//        delete(count_vars.$offset);
 
-        delete(count_vars.$limit);
-        delete(count_vars.$offset);
-
-        return db.get(count_sql, count_vars, function(count) {
-            console.log(count_sql);
-            console.log(val_vars);
+//        return db.get(count_sql, count_vars, function(count) {
             return db.all(sql, val_vars, function(data) {
                 var results = {};
 
                 _.each(data, function(row) {
-                    if (!row.g) {
-                        console.log('eh', data);
 
-                    }
                     if (!results[row.g]) {
                         results[row.g] = [];
                     }
@@ -104,7 +99,7 @@ module.exports = function(db, req, res, next) {
                     duration: new Date().getTime() - req.time(),
                     error: false,
                     num_results: data.length,
-                    total: count.total,
+//                    total: count.total,
                     sql: sql,
                     vars: val_vars,
                     values: results
@@ -115,7 +110,7 @@ module.exports = function(db, req, res, next) {
                 return next();
 
             });
-        });
+//        });
 
 
     }

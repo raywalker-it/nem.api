@@ -31,7 +31,7 @@
     module.exports = {
         db: false,
         limits: {
-            num_results: 150000,
+            num_results: 300000,
             multiple: 288 // 5 minutes * 12 * 24 = 288 updates per day
         },
         times: {
@@ -48,16 +48,45 @@
 
             this.db = db;
 
-            this.db.exec('PRAGMA busy_timeout = 60000; PRAGMA synchronous = 0; PRAGMA temp_store = MEMORY; PRAGMA cache_size=-800000; PRAGMA page_size=8192;', function() {
-                deferred.resolve();
-            });
+            this.db.exec('PRAGMA busy_timeout = 10000; PRAGMA synchronous = 0; PRAGMA temp_store = MEMORY; PRAGMA cache_size=-1000000; PRAGMA page_size=65536;', function() {
+                this.all('PRAGMA busy_timeout', function(results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA synchronous', function(results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA temp_store', function(results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA cache_size', function(results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA page_size', function(results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA journal_mode;', function (results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA user_version;', function (results) {
+                    console.log(results);
+                });
+                this.all('PRAGMA integrity_check', function(results) {
+                    console.log(results);
+                    deferred.resolve();
+                });
+
+//                this.all('PRAGMA stats',function(results) {
+//                    console.log(results);
+//                });
+
+            }.bind(this));
 
             return deferred.promise;
 
         },
         get: function(sql, variables, next) {
             if (!this.db) {
-                throw 'Database is not initialised, use query.setDB()';
+                throw 'Database is not initialised';
             }
 
             if (typeof variables === 'function') {
@@ -67,28 +96,29 @@
             return this.db.get(sql, variables, function(err, data) {
                 if (err) {
                     console.error(chalk.red('ERROR'), moment().unix(), chalk.yellow(sql), err);
-                } else {
-                    next(data);
+                    return next(err);
                 }
+
+                return next(data);
             });
         },
         all: function(sql, variables, next) {
 
             if (!this.db) {
-                throw 'Database is not initialised, use query.setDB()';
+                throw 'Database is not initialised';
             }
 
             if (typeof variables === 'function') {
                 next = variables;
             }
 
-
             return this.db.all(sql, variables, function(err, rows) {
                 if (err) {
                     console.error(chalk.red('ERROR'), moment().unix(), chalk.yellow(sql), err);
-                } else {
-                    next(rows);
+                    return next(err);
                 }
+
+                return next(rows);
             });
         }
     };

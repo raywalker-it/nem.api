@@ -1,15 +1,24 @@
-PRAGMA foreign_keys = 0;
+
+PRAGMA journal_mode = WAL;
+PRAGMA page_size = 65536;
+PRAGMA temp_store = MEMORY;
+PRAGMA cache_size = -1000000;
+PRAGMA synchronous = OFF;
+
+PRAGMA foreign_keys = OFF;
+
 BEGIN;
+
 /* =========================================================================== */
 DROP TABLE IF EXISTS "scrape";
 CREATE TABLE scrape (
     filename TEXT NOT NULL, 
     scrape_time INTEGER PRIMARY KEY
 ) WITHOUT ROWID;
--- CREATE UNIQUE INDEX "scrape_unique_time_desc" on scrape (time DESC);
 CREATE UNIQUE INDEX "scrape_unique_filename_time" ON scrape ("filename","scrape_time");
  
 /* =========================================================================== */
+
 DROP TABLE IF EXISTS "scada_values";
 CREATE TABLE "scada_values" (
     "scrape_time" INTEGER NOT NULL,
@@ -20,9 +29,8 @@ CREATE TABLE "scada_values" (
     FOREIGN KEY (scrape_time) REFERENCES scrape(scrape_time)
 ) WITHOUT ROWID;
 
--- CREATE UNIQUE INDEX "scada_values_idx_scrape_gen_desc" on scada_values (scrape_id DESC, generator_id DESC);
-
 /* =========================================================================== */
+
 DROP TABLE IF EXISTS "participant";
 CREATE TABLE participant (
     id INTEGER PRIMARY KEY AUTOINCREMENT, /* foreign key from generator.participant_id */
@@ -30,6 +38,7 @@ CREATE TABLE participant (
 );
 
 /* =========================================================================== */
+
 DROP TABLE IF EXISTS "technology";
 CREATE TABLE "technology" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT, /* foreign key from fuel.technology_id */
@@ -39,6 +48,7 @@ CREATE TABLE "technology" (
 CREATE UNIQUE INDEX "technology_unique_type_description" ON "technology" ("type", "description");
 
 /* =========================================================================== */
+
 DROP TABLE IF EXISTS "fuel";
 CREATE TABLE "fuel" (
     "technology_id" INTEGER NOT NULL,
@@ -88,4 +98,5 @@ CREATE INDEX "flat_generators_idx_fueltype_fueldesc" ON "flat_generators" ("fuel
 
 /* =========================================================================== */
 END;
+
 PRAGMA foreign_keys = 1;

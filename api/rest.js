@@ -26,26 +26,19 @@
     'use strict';
 
     var fs = require('fs'),
-        config = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf-8'));
+        path = require('path'),
+        config = JSON.parse(fs.readFileSync(path.resolve(__dirname,'config.json'), 'utf-8')),
+        user = require(path.resolve(__dirname,'user.js'));
 
-    try {
-        //        console.log('Old User ID: ' + process.getuid() + ', Old Group ID: ' + process.getgid());
-        process.setgid(config.user);
-        process.setuid(config.group);
-        //        console.log('New User ID: ' + process.getuid() + ', New Group ID: ' + process.getgid());
-    } catch (err) {
-        console.log('Can\t shed privileges, running away!');
-        process.exit(1);
-    }
+    user.privileges(config.user, config.group);
 
-    var name = 'NEM API',
+    var name = config.name,
         restify = require('restify'),
         server = config.ssl.enabled ? restify.createServer({
             certificate: config.ssl.certificate,
             key: config.ssl.key
         }) : restify.createServer({name: name}),
-        path = require('path'),
-        sqlite3 = require('sqlite3').verbose(),
+        sqlite3 = require('sqlite3'),
         database = new sqlite3.cached.Database(path.resolve(__dirname, '..', '..', 'db', 'scada.db')),
         db = require('./v1.0/db.js'),
         chalk = require('chalk'),
@@ -53,8 +46,6 @@
         warn = chalk.yellow,
         bad = chalk.red,
         _s = require('underscore.string');
-
-
 
     database.on('profile', function(sql, time) {
         console.log((function(time) {
@@ -69,6 +60,7 @@
     });
 
     db.init(database, config).then(function() {
+        var default_api = require(path.resolve(__dirname, 'v' + config.defaults.version, 'api.js'));
 
         server.use(restify.queryParser());
 
@@ -77,11 +69,20 @@
 //        server.use(restify.gzipResponse());
 
         server.get(/^\/(?:api\/)?([v0-9\.]+)\/([\w]+)\/?([\w]+)?\/?([\w]+)?\/?([\w]+)?/, function(req, res, next) {
+            var api;
+
             console.log(chalk.bold(req.connection.remoteAddress), ' ', chalk.underline(req.url));
 
-            var api = require('./' + req.params[0] + '/api.js');
-
-            //        console.log(req.params);
+            try {
+                if (req.params[0] !== config.defaults.version) {
+                    api = require(path.resolve(__dirname, req.params[0], 'api.js'));
+                } else {
+                    api = default_api;
+                }
+            } catch (err) {
+                res.send(404, {error: 'Version not found - ' + req.params[0]});
+                return next();
+            }
 
             switch (req.params[1]) {
                 case 'values':
@@ -95,15 +96,36 @@
                     return api.generators(db, req, res, next);
 
                 default:
-                    res.send(500);
+                    res.send(404, {error: "Please specify a valid route"});
                     next();
             }
         });
 
-        server.get(/^\/([v0-9\.]+)\/?/, function(req, res, next) {
+        server.get(/^\/(?:api)?\/?([v0-9\.]+\/?)?/, function(req, res, next) {
+            var api;
+
+            if (!req.params[0]) {
+                res.send({
+                    error: "Please specify an API version, eg /api/v" + config.defaults.version + '/'
+                });
+
+                return next();
+            }
+
+            try {
+                if (req.params[0] && req.params[0] !== config.defaults.version) {
+                    api = require(path.resolve(__dirname, req.params[0], 'api.js'));
+                }
+            } catch (err) {
+                res.send(404, {error: 'Version not found - ' + req.params[0]});
+                return next();
+            }
+
             res.send({
-                hello: "You're now talking to the raywalker.it's NEM API, version " + req.params[0]
+                hello: "You're now talking to the " + config.name,
+                version: req.params[0].replace('/','')
             });
+
             next();
         });
 
