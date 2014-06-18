@@ -1,10 +1,13 @@
 
-PRAGMA journal_mode = WAL;
+PRAGMA journal_mode = DELETE;
 PRAGMA page_size = 65536;
 PRAGMA temp_store = MEMORY;
 PRAGMA cache_size = -1000000;
 PRAGMA synchronous = OFF;
 
+VACUUM;
+
+PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = OFF;
 
 BEGIN;
@@ -98,5 +101,7 @@ CREATE INDEX "flat_generators_idx_fueltype_fueldesc" ON "flat_generators" ("fuel
 
 /* =========================================================================== */
 END;
+
+VACUUM;
 
 PRAGMA foreign_keys = 1;
