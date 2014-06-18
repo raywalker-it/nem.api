@@ -30,7 +30,7 @@ module.exports = {
         try {
             if (user && group) {
                 if (user === 'root' || group === 'root') {
-                    throw new Error('Cowardly refusing to run as superuser');
+                    throw new Error('[ERROR] Cowardly refusing to run as superuser');
                 }
 
                 process.setgid(user);
@@ -41,10 +41,10 @@ module.exports = {
             } else {
 
                 if (process.getuid() === 0 || process.getgid() === 0) {
-                    throw new Error('Cowardly refusing to run as superuser');
+                    throw new Error('[ERROR] Cowardly refusing to run as superuser');
                 }
 
-                console.warn(warn('User or group not set, continuing as',process.getuid(), process.getgid()));
+                console.warn(warn('[WARNING] User or group not set, continuing as',process.getuid(), process.getgid()));
             }
         } catch (err) {
             console.error(error(err));

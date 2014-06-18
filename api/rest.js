@@ -25,21 +25,46 @@
 (function() {
     'use strict';
 
+
+
     var fs = require('fs'),
         path = require('path'),
-        config = JSON.parse(fs.readFileSync(path.resolve(__dirname,'config.json'), 'utf-8')),
-        user = require(path.resolve(__dirname,'user.js'));
+        user = require(path.resolve(__dirname,'user.js')),
+        config;
+
+    // Load configuration
+    try {
+        config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json'), 'utf-8'));
+    } catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
 
     user.privileges(config.user, config.group);
 
+    var sqlite3 = require('sqlite3');
+
+    // If no database file was passed in command line parameters
+    // Use configured database file
+    var database_file = config.db.sqlite;
+
+    if (!database_file) {
+        console.error('Database is not defined, exiting');
+        process.exit(1);
+    }
+
+    if (database_file.indexOf('/') !== 0 && database_file.indexOf('..') !== 0) {
+        // not an absolute path, assume it's relative to the config file
+        database_file = path.resolve(__dirname, database_file);
+    }
+    
     var name = config.name,
         restify = require('restify'),
         server = config.ssl.enabled ? restify.createServer({
             certificate: config.ssl.certificate,
             key: config.ssl.key
         }) : restify.createServer({name: name}),
-        sqlite3 = require('sqlite3'),
-        database = new sqlite3.cached.Database(path.resolve(__dirname, '..', '..', 'db', 'scada.db')),
+        database = new sqlite3.cached.Database(database_file),
         db = require('./v1.0/db.js'),
         chalk = require('chalk'),
         good = chalk.green,

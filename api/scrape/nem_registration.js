@@ -525,7 +525,7 @@
 
     function readRegistrationFile() {
         var q = Q.defer();
-
+        
         if (registration_file.indexOf('/') !== 0 && registration_file.indexOf('..') !== 0) {
             // not an absolute path, assume it's relative to the config file
             registration_file = path.resolve(__dirname, '..', registration_file);
@@ -564,8 +564,9 @@
                     console.error(err);
                 }
 
-                if (i === len) {
-                    return q.resolve();
+                if (++i === len) {
+                    console.log('Database\t', database);
+                    q.resolve();
                 }
             });
 
@@ -583,7 +584,6 @@
         start_time = new Date().getTime();
 
         return Q.all([readRegistrationFile(), initDB()]).then(function(data) {
-            console.log('Database\t', database);
 
             return phase1(data[0]).then(function(response) {
 
