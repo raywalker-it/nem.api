@@ -13,9 +13,7 @@
 
         <link rel="stylesheet" href="css/main.css">
         <link href='//fonts.googleapis.com/css?family=Open+Sans:400,600,700,300' rel='stylesheet' type='text/css'>
-        
         <script src="js/vendor/modernizr.min.js"></script>
-        
     </head>
     <body>
         <!--[if lt IE 7]>
@@ -33,31 +31,30 @@
                                     </ul>
                                 </nav>-->
             </header>
-            
         </div>
         <nav id="sticky">
-                <ul class="pagination">
-                    <li>
-                        <a href="#page-previous" title="Previous interval">Previous page</a> 
-                        <a href="#page-next" title="Previous interval">Next page</a>
-                    </li>
-                    <li>
-                        <a class="today" href="#today">
-                            Today
-                        </a>
-                    </li>
-                    <li>
-                        <a class="days-1" href="#days-1" title="Chart duration: 1 day">1 day</a>
-                        <a class="days-3" href="#days-3" title="Chart duration: 3 days">3 days</a>
-                        <a class="days-7" href="#days-7" title="Chart duration: 7 days">7 days</a>
-                    </li>
-                    <li>
-                        <a class="live" href="#live" title="Enable live updates">
-                            Live
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+            <ul class="pagination">
+                <li>
+                    <a href="#page-previous" title="Previous interval">Previous page</a> 
+                    <a href="#page-next" title="Previous interval">Next page</a>
+                </li>
+                <li>
+                    <a class="today" href="#today">
+                        Today
+                    </a>
+                </li>
+                <li>
+                    <a class="days-1" href="#days-1" title="Chart duration: 1 day">1 day</a>
+                    <a class="days-3" href="#days-3" title="Chart duration: 3 days">3 days</a>
+                    <a class="days-7" href="#days-7" title="Chart duration: 7 days">7 days</a>
+                </li>
+                <li>
+                    <a class="live" href="#live" title="Enable live updates">
+                        Live
+                    </a>
+                </li>
+            </ul>
+        </nav>
         <div class="main-container">
             <div class="main wrapper clearfix">
 
@@ -77,7 +74,7 @@
                         <!--<div class="chart" id="WA1" ></div>-->
                         <!--<div class="chart" id="NT1" ></div>-->
                         <div class="chart" id="ACT1" data-name="Australian Captial Territory" ></div>
-                        
+
                         <footer>
                             <h2></h2>
                             <p>
@@ -85,17 +82,17 @@
                                 There are holes in the NEM registration data I'm currently using which cause certain generators to not register in data or to register as incorrect types.  This is software under active development and these issues will be resolved soon<sup>TM</sup>.
                             </p>
                             <div id="na_debug" class="debug">
-                                
+
                             </div>
                         </footer>
-                        
+
                     </section>
-<!--                    
-                    <section>
-                        <h2>Percentage power generation by state</h2>
-                        <div id="state_percentage" class="chart"></div>
-                    </section>-->
-                    
+                    <!--                    
+                                        <section>
+                                            <h2>Percentage power generation by state</h2>
+                                            <div id="state_percentage" class="chart"></div>
+                                        </section>-->
+
                     <footer>
                         <h3>Additional resources</h3>
                         <p>Data from <a href="http://www.aemo.com.au/">Australian Energy Market Operator</a>, at <a href="http://www.nemweb.com.au/Reports">http://www.nemweb.com.au/Reports</a></p>
@@ -107,7 +104,7 @@
                 </aside>
                 <aside>
                     <h3>API</h3>
-                    <p><a href="/api/v1.0/scada">https://nem.raywalker.it/api/v1.0/scada</a>
+                    <p><a href="/api/v1.0/values">https://nem.raywalker.it/api/v1.0/values</a>
                     <dl>
                         <dt><strong>time_start</strong> or <strong>start_time</strong></dt>
                         <dd>Generation results from this date. Any standard timestring or unix timestamp is accepted</dd>
@@ -127,16 +124,16 @@
                                 </li>
                             </ul>
                         </dd>
-                            <dt><strong>fuel</strong></dt>
+                        <dt><strong>fuel</strong></dt>
                         <dd>Biomass, Fossil, Fuel Oil, Hydro, Renewable, Renewable/ Biomass / Waste, Solar, Wind</dd>
-                        <dt><strong>tech</strong></dt>
-                        <dd>Combustion, Renewable, Wind</dd>
-                        <dt><strong>fuel_desc</strong></dt>
-                        <dd>Bagasse, Black Coal, Brown Coal, Coal Seam Methane, Coal Tailings, Diesel, Kerosene, Natural Gas, Natural Gas / Diesel, Natural Gas / Fuel Oil, Waste Coal Mine Gas, Hydro, Water, Landfill Gas, Landfill Methane / Landfill Gas, Macadamia Nut Shells, Sewerage/Waste Water, Solar PV, Wind</dd>
-                        <dt><strong>state</strong></dt>
-                        <dd>ACT1, NSW1, QLD1, SA1, TAS1, VIC1</dd>
-                        <dt>company</dt>
-                        <dd>
+                        <dt class="tech"><strong>tech</strong></dt>
+                        <dd class="tech">Combustion, Renewable, Wind</dd>
+                        <dt class="fuel_desc"><strong>fuel_desc</strong></dt>
+                        <dd class="fuel_desc">Bagasse, Black Coal, Brown Coal, Coal Seam Methane, Coal Tailings, Diesel, Kerosene, Natural Gas, Natural Gas / Diesel, Natural Gas / Fuel Oil, Waste Coal Mine Gas, Hydro, Water, Landfill Gas, Landfill Methane / Landfill Gas, Macadamia Nut Shells, Sewerage/Waste Water, Solar PV, Wind</dd>
+                        <dt class="state"><strong>state</strong></dt>
+                        <dd class="state">ACT1, NSW1, QLD1, SA1, TAS1, VIC1</dd>
+                        <dt class="company">company</dt>
+                        <dd class="company">
                             EnergyAustralia Pty Ltd
                             AGL Hydro Partnership
                             EnerNOC Pty Ltd
@@ -226,7 +223,7 @@
                 <p>
                     API and interface by <a href="https://raywalker.it">raywalker.IT</a>
                 </p>
-                
+
                 <h3>Thanks</h3>
                 <p>With thanks to <a href="https://twitter.com/KetanJ0">Ketan Joshi</a> and <a href="https://twitter.com/ozjimbob">Grant Williamson</a></p>
             </footer>
