@@ -3,3 +3,6 @@
 /.sass-cache/
 /index.html
 /npm-debug.log
+/api/db/scada.db
+/api/db/scada.db-shm
+/api/db/scada.db-wal
