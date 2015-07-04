@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-(function(undefined) {
+(function (undefined) {
 
     var simulate = false;
     var debug = false;
@@ -52,7 +52,7 @@
         chalk = require('chalk'),
         config = false;
 
-    (function(args) {
+    (function (args) {
 
         while (args.length > 0) {
 
@@ -74,7 +74,9 @@
                     break;
 
                 case '--verbose':
+                    console.log(' !! Debugging is enabled');
                     debug = true;
+                    console.log(' !! Verbose logging enabled');
                     verbose = true;
                     break;
 
@@ -138,7 +140,7 @@
         }
     }
 
-    var user = require(path.resolve(__dirname,'..','user.js'));
+    var user = require(path.resolve(__dirname, '..', 'user.js'));
 
     user.privileges(config.user, config.group);
 
@@ -174,7 +176,7 @@
 
     var moment = require('moment');
     var Q = require('q');
-    var temp = require('temp').track();
+    var temp = require('temp');
     var _ = require('lodash');
     var _s = require('underscore.string');
 
@@ -187,7 +189,7 @@
 
     if (verbose) {
 
-        db.on('trace', function(sql) {
+        db.on('trace', function (sql) {
             var now = new Date().getTime();
 
             console.log(_s.lpad(now - start_time, 10, ' '), sql);
@@ -195,20 +197,22 @@
         });
     }
 
+    //temp.track();
+
     Q.longStackSupport = true;
 
     //var CronJob = require('cron').CronJob;
 
-    (function() {
+    (function () {
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round?redirectlocale=en-US&redirectslug=JavaScript%2FReference%2FGlobal_Objects%2FMath%2Fround
 
         /**
          * Decimal adjustment of a number.
          *
-         * @param	{String}	type	The type of adjustment.
-         * @param	{Number}	value	The number.
-         * @param	{Integer}	exp		The exponent (the 10 logarithm of the adjustment base).
-         * @returns	{Number}			The adjusted value.
+         * @param   {String}    type    The type of adjustment.
+         * @param   {Number}    value   The number.
+         * @param   {Integer}   exp     The exponent (the 10 logarithm of the adjustment base).
+         * @returns {Number}            The adjusted value.
          */
         function decimalAdjust(type, value, exp) {
             // If the exp is undefined or zero...
@@ -231,19 +235,19 @@
 
         // Decimal round
         if (!Math.round10) {
-            Math.round10 = function(value, exp) {
+            Math.round10 = function (value, exp) {
                 return decimalAdjust('round', value, exp);
             };
         }
         // Decimal floor
         if (!Math.floor10) {
-            Math.floor10 = function(value, exp) {
+            Math.floor10 = function (value, exp) {
                 return decimalAdjust('floor', value, exp);
             };
         }
         // Decimal ceil
         if (!Math.ceil10) {
-            Math.ceil10 = function(value, exp) {
+            Math.ceil10 = function (value, exp) {
                 return decimalAdjust('ceil', value, exp);
             };
         }
@@ -260,9 +264,15 @@
         }
     }
 
+    function verb(text) {
+        if (verbose) {
+            output(text);
+        }
+    }
+
     var shutting_down = false;
 
-    process.on('SIGINT', function() {
+    process.on('SIGINT', function () {
         console.log('\nCaught interrupt signal ...');
         shutting_down = true;
     });
@@ -273,7 +283,7 @@
                 console.log('\nAnalyzing...');
                 db.exec('ANALYZE;');
             }
-            db.exec('PRAGMA automatic_index = ON;', function() {
+            db.exec('PRAGMA automatic_index = ON;', function () {
                 console.log('\nDone');
                 process.exit();
             });
@@ -293,12 +303,13 @@
         jsdom.env({
             url: uri,
             scripts: [],
-            done: function(err, window) {
+            done: function (err, window) {
                 var $ = require('jquery')(window),
                     links = null;
 
                 if (!err) {
                     links = $.makeArray($("pre a[href$=zip]"));
+                    console.log(links.length + ' .zip files to process');
                     if (archive_mode && reverse) {
                         links.reverse();
                     }
@@ -321,7 +332,7 @@
     function checkNewData(href) {
         var deferred = Q.defer();
 
-        db.get('SELECT filename FROM scrape WHERE filename=?', path.basename(href), function(err, row) {
+        db.get('SELECT filename FROM scrape WHERE filename=?', path.basename(href), function (err, row) {
             if (err) {
                 console.log(err);
                 deferred.reject();
@@ -343,52 +354,84 @@
 
 // ===========================================================================
 
-
-
-    function fetchZipFile(file_url, i) {
+    /**
+     * Gets a zip file from local file or remote,
+     *
+     * @param   string    file_uri
+     * @param   int       i
+     * @returns promise
+     */
+    function fetchZipFile(file_uri, i) {
 
         checkExit();
 
         var http = require('http'),
             AdmZip = require('adm-zip'),
-            BufferJoiner = require('bufferjoiner'), deferred = Q.defer();
+            BufferJoiner = require('bufferjoiner'),
+            deferred = Q.defer();
 
-        dbg('\n [' + _s.lpad(i, 5, ' ') + '] Processing: ' + file_url + ' ... ');
+        dbg('\n [' + _s.lpad(i, 5, ' ') + '] Processing: ' + file_uri + ' ... ');
 
-        if (file_url.indexOf('http') === 0) {
+        if (file_uri.indexOf('http') === 0) {
+
             // Read from HTTP
-            http.get(file_url, function(res) {
+            http.get(file_uri, function (res) {
 
                 var buffer = new BufferJoiner();
 
-                res.on('data', function(chunk) {
+                res.on('data', function (chunk) {
 
                     buffer.add(chunk);
 
-                }).on('end', function() {
-
+                }).on('end', function () {
+                    // Finished downloading zip file
                     var zip = buffer.join(true),
-                        admzip = new AdmZip(zip),
-                        entries = admzip.getEntries();
+                        admzip,
+                        entries;
 
+                    try {
+                        admzip = new AdmZip(zip);
+                    } catch (e) {
+                        // Error parsing zip file
+                        dbg('ERROR opening ' + file_uri);
+                        deferred.reject(e);
+                        return;
+                    }
+
+                    entries = admzip.getEntries();
                     if (entries.length > 1) {
+                        verb('Archive file, length ' + entries.length);
                         // Archive of zips
                         // So extract to a temporary dir
-                        temp.mkdir('nem_archive_', function(err, dir) {
+                        try {
+                            temp.mkdir('nem_archive_', function (err, dir) {
+                                verb('\nUsing temporary directory: ' + dir);
+                                try {
+                                    admzip.extractAllTo(dir, true);
+                                } catch (e) {
+                                    console.error(e);
+                                    deferred.reject(e);
+                                    return false;
+                                }
 
-                            admzip.extractAllTo(dir, true);
-
-                            fs.readdir(dir, function(err, files) {
-
-                                deferred.resolve([files, dir]);
+                                fs.readdir(dir, function (err, files) {
+                                    if (err) {
+                                        throw err;
+                                    }
+                                    deferred.resolve([files, dir]);
+                                });
                             });
-                        });
+                        } catch (e) {
+                            console.error(e);
+                            deferred.reject(e);
+                        }
 
                     } else {
-                        // Single file
+                        // Zip contains only a single file
                         if (entries[0].name.match(/csv$/i)) {
+                            // it is a .csv file
 
-                            parseCSV(entries[0].getData(), file_url, function() {
+                            parseCSV(entries[0].getData(), file_uri, function () {
                                 deferred.resolve();
                             });
 
@@ -398,35 +441,36 @@
                         }
                     }
 
+
                 });
 
-            }).on('error', function(e) {
-                console.log('Error fetching ', file_url, e);
-                deferred.reject();
+            }).on('error', function (e) {
+                console.log('ERROR fetching ', file_uri, e);
+                deferred.reject(e);
             });
 
         } else {
             // Read from file system
 
-            if (file_url.match(/zip$/i)) {
+            // if the file has a .zip extension
+            if (file_uri.match(/zip$/i)) {
 
-                (function(file) {
+                (function (file) {
 
-                    var processEntries = function() {
+                    var processEntries = function () {
+                            // quit loop if we have exit signal
+                            checkExit();
 
-                        checkExit();
-
-                        if (entries.length > 0) {
-                            parseEntry(entries.shift());
-                        } else {
-                            deferred.resolve();
-                        }
-                    },
-                        parseEntry = function(entry) {
+                            if (entries.length > 0) {
+                                parseEntry(entries.shift());
+                            } else {
+                                deferred.resolve();
+                            }
+                        },
+                        parseEntry = function (entry) {
                             if (entry.name.match(/csv$/i)) {
                                 // Single file
-
-                                parseCSV(entry.getData(), file_url, function() {
+                                parseCSV(entry.getData(), file_uri, function () {
                                     processEntries();
                                 });
 
@@ -439,11 +483,11 @@
 
                     processEntries();
 
-                }(file_url));
+                }(file_uri));
 
             } else {
-                fs.readFile(file_url, function(err, obj) {
-                    parseCSV(obj, file_url, function() {
+                fs.readFile(file_uri, function (err, obj) {
+                    parseCSV(obj, file_uri, function () {
                         deferred.resolve();
                     });
                 });
@@ -456,15 +500,22 @@
 
 // ===========================================================================
 
-
+    /**
+     *
+     * @param buffer
+     * @param uri
+     * @param next
+     * @returns {*}
+     */
     function parseCSV(buffer, uri, next) {
 
+        // quit now if exit signal received
         checkExit();
 
         var csv_text = buffer.toString('utf-8'),
             csv = require('csv');
 
-        return csv.parse(csv_text, function(err, obj) {
+        return csv.parse(csv_text, function (err, obj) {
 
             if (err) {
                 console.error(err);
@@ -476,8 +527,7 @@
                 time = moment(timestr).unix(),
                 added = [];
 
-
-            db.get('SELECT scrape_time FROM scrape WHERE scrape_time=?', [time], function(err, result) {
+            db.get('SELECT scrape_time FROM scrape WHERE scrape_time=?', [time], function (err, result) {
 
                 if (err) {
                     console.error(err);
@@ -485,30 +535,41 @@
                     return next();
                 }
 
-                // undefined means time isn't in db yet
                 if (simulate) {
-                    return;
-                }
-
-                if (result !== undefined ) {
-                    console.warn(chalk.yellow('scrape_time already exists in `scrape`',time,result));
-
-                    checkExit();
+                    // @todo this is not an accurate simulation
                     return next();
-
                 }
 
+                // undefined means time isn't in db yet
+                if (result !== undefined) {
+                    // this time already exists in the database
+                    console.warn(chalk.yellow('scrape_time already exists in `scrape`', time, result));
+
+                    // check for exit signal
+                    checkExit();
+
+                    // callback
+                    return next();
+                }
+
+                // begin database transaction
                 db.exec('BEGIN IMMEDIATE TRANSACTION');
 
-                return db.run('INSERT INTO scrape(scrape_time,filename) VALUES(?,?)', [time, path.basename(uri)], function() {
+                return db.run('INSERT INTO scrape(scrape_time,filename) VALUES(?,?)', [time, path.basename(uri)], function () {
                     var ok = true,
-                    statement = db.prepare('INSERT INTO scada_values(scrape_time,generator_id,value) VALUES (?,?,?)');
+                        statement = db.prepare('INSERT INTO scada_values(scrape_time,generator_id,value) VALUES (?,?,?)');
 
-                    _.each(obj, function(row) {
+                    _.each(obj, function (row) {
 
                         if (row[0] === 'D') {
                             /**
-                             * 0 = I, 1 = DISPATCH, 2 = UNIT_SCADA, 3 = 1,  4 = SETTLEMENTDATE, 5 = DUID, 6 = SCADAVALUE
+                             * 0 = I,
+                             * 1 = DISPATCH,
+                             * 2 = UNIT_SCADA,
+                             * 3 = 1,
+                             * 4 = SETTLEMENTDATE,
+                             * 5 = DUID,
+                             * 6 = SCADAVALUE
                              */
                             var duid = _s.trim(row[5]),
                                 genID = generators[duid],
@@ -538,7 +599,7 @@
                         }
                     });
 
-                    _.forIn(added, function(val, ident) {
+                    _.forIn(added, function (val, ident) {
                         try {
                             var scrape_gen = ident.split('_');
                             return statement.run([scrape_gen[0], scrape_gen[1], val]);
@@ -555,17 +616,13 @@
                         db.exec('ROLLBACK');
                     }
 
-                    return statement.finalize(function() {
+                    return statement.finalize(function () {
                         checkExit();
                         return next();
                     });
 
                 });
             });
-
-
-
-
 
 
         });
@@ -646,8 +703,9 @@
 
     function startArchiveParsing(done) {
 
+        dbg('Starting archive processing ...');
         // ARCHIVE results
-        return scrape(scrape_uri).then(function(response) {
+        return scrape(scrape_uri).then(function (response) {
 
             var day = 0,
                 parsed = 0,
@@ -697,7 +755,7 @@
             function processArchive(file_path) {
                 var def = Q.defer();
 
-                checkNewData(file_path).then(function(newData) {
+                checkNewData(file_path).then(function (newData) {
 
                     progress();
 
@@ -707,7 +765,7 @@
 
                     if (newData) {
 
-                        return fetchZipFile(file_path, day).then(function() {
+                        return fetchZipFile(file_path, day).then(function () {
 
                             parsed++;
 
@@ -728,12 +786,14 @@
 
             /**
              * Fetches archive of archives, processes each archive in turn
-             * @param {string} href
+             * @param {string} href Address of the archive file
              * @returns {undefined}
              */
             function getArchive(href) {
 
-                return fetchZipFile(href, day).then(function(data) {
+                verb('Fetching ' + href);
+
+                return fetchZipFile(href, day).then(function (data) {
                     var files = data[0],
                         file_path = data[1];
 
@@ -746,13 +806,15 @@
                     }
 
                     function processSubArchive(file) {
-                        return processArchive(path.resolve(file_path, file)).then(function() {
+                        return processArchive(path.resolve(file_path, file)).then(function () {
                             return continueProcessingSubArchive();
                         });
                     }
 
                     return continueProcessingSubArchive();
 
+                }, function (err) {
+                    console.error(err);
                 });
             }
 
@@ -763,51 +825,54 @@
 
     function startCurrentParsing(done) {
         // CURRENT results
-        scrape(scrape_uri).then(function(response) {
+        scrape(scrape_uri).then(function (response) {
 
             var i = 0,
                 skip = 0,
                 length = response.length,
-                processResponse = function() {
+                processResponse = function () {
 
                     checkExit();
 
                     if (response.length > 0) {
 
-                        continueProcessing(response.shift().href);
+                        return continueProcessing(response.shift().href);
 
                     } else {
-
-                        endProcessing();
-
+                        dbg('Finished processing', scrape_uri);
+                        return endProcessing();
                     }
 
                 },
-                continueProcessing = function(href) {
+                continueProcessing = function (href) {
 
-                    checkNewData(href).then(function(newData) {
+                    return checkNewData(href)
+                        .then(function (newData) {
 
-                        if (newData) {
+                            if (newData) {
 
-                            output(_s.lpad(i, 4, ' ') + '\b\b\b\b');
+                                // output padded index
+                                output(_s.lpad(i, 4, ' ') + '\b\b\b\b');
 
-                            fetchZipFile(href, i).then(function() {
-                                i++;
+                                //
+                                return fetchZipFile(href, i).then(function () {
 
+                                    i++;
+
+                                    return processResponse();
+                                });
+
+                            } else {
+                                skip++;
                                 return processResponse();
-                            });
 
-                        } else {
-                            skip++;
-                            return processResponse();
+                            }
 
-                        }
-
-                    });
+                        });
                 },
-                endProcessing = function() {
+                endProcessing = function () {
                     console.log('\nFinished processing ', i, 'of', length, 'items\n', skip, 'skipped.');
-                    done();
+                    return done();
                 };
 
             output('Scraping data from ' + scrape_uri + ' - ' + length + ' items : ');
@@ -817,14 +882,14 @@
     }
 
     function execPragma() {
-         var q = Q.defer(),
+        var q = Q.defer(),
             i = 0,
             len = Object.keys(config.db.pragma).length;
 
-        _.forIn(config.db.pragma, function(val, key) {
+        _.forIn(config.db.pragma, function (val, key) {
             var sql = 'PRAGMA ' + key + ' = ' + val + ';';
 
-            db.exec(sql, function(err) {
+            db.exec(sql, function (err) {
                 if (err) {
                     console.error(err);
                 }
@@ -863,10 +928,9 @@
 //        });
 
 
+        return execPragma().then(function () {
 
-        return execPragma().then(function() {
-
-            return db.all('SELECT id, duid FROM generator', function(err, rows) {
+            return db.all('SELECT id, duid FROM generator', function (err, rows) {
 
                 if (err) {
                     console.error(err);
@@ -878,7 +942,7 @@
                     process.exit(1);
                 }
 
-                _.each(rows, function(gen) {
+                _.each(rows, function (gen) {
                     generators[gen.duid] = gen.id;
                 });
 
@@ -892,7 +956,7 @@
     }
 
     if (nuke) {
-        return db.exec('PRAGMA foreign_keys = OFF; BEGIN; DELETE FROM scada_values; DELETE FROM scrape; END; PRAGMA foreign_keys = ON; ', function() {
+        return db.exec('PRAGMA foreign_keys = OFF; BEGIN; DELETE FROM scada_values; DELETE FROM scrape; END; PRAGMA foreign_keys = ON; ', function () {
             console.log(chalk.yellow('TABLES scada_values and scrape CLEARED!'));
             process.exit(1);
         });

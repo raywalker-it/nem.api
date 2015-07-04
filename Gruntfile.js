@@ -7,8 +7,10 @@ module.exports = function(grunt) {
         css: 'src/css',
         scss: 'src/scss',
         js: 'src/js',
+        bower: 'bower_components'
     };
 
+    require('load-grunt-tasks')(grunt);
 
     // Project configuration.
     grunt.initConfig({
@@ -33,12 +35,12 @@ module.exports = function(grunt) {
             },
             vendor: {
                 src: [
-                    '<%= cfg.js %>/vendor/lodash.min.js',
+                    '<%= cfg.bower %>/lodash/dist/lodash.min.js',
+                    '<%= cfg.bower %>/uri.js/src/URI.js',
+                    '<%= cfg.bower %>/uri.js/src/jquery.URI.js',
+                    '<%= cfg.bower %>/moment/min/moment.min.js',
+                    '<%= cfg.js %>/vendor/jquery.sticky.js',
                     '<%= cfg.js %>/vendor/highcharts-custom.js',
-                    '<%= cfg.js %>/vendor/URI.js',
-                    '<%= cfg.js %>/vendor/jquery.URI.js',
-                    '<%= cfg.js %>/vendor/moment.min.js',
-                    '<%= cfg.js %>/vendor/jquery.sticky.js'
                     //                    '<%= cfg.js %>/vendor/themes/gray.js',
                     //                    '<%= cfg.js %>/vendor/moment.min.js'
                 ],
@@ -179,6 +181,9 @@ module.exports = function(grunt) {
         },
 
         watch: {
+            options: {
+              livereload: true
+            },
             api: {
                 files: '<%= cfg.api %>/**/*.js',
                 tasks: ['jshint:api']
@@ -198,18 +203,6 @@ module.exports = function(grunt) {
         }
     });
 
-    // These plugins provide necessary tasks.
-    grunt.loadNpmTasks('grunt-contrib-concat');
-    grunt.loadNpmTasks('grunt-contrib-copy');
-    grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.loadNpmTasks('grunt-contrib-qunit');
-    grunt.loadNpmTasks('grunt-contrib-jshint');
-    grunt.loadNpmTasks('grunt-contrib-sass');
-    grunt.loadNpmTasks('grunt-contrib-watch');
-    grunt.loadNpmTasks('grunt-contrib-htmlmin');
-    grunt.loadNpmTasks('grunt-contrib-cssmin');
-    grunt.loadNpmTasks('grunt-modernizr');
-    grunt.loadNpmTasks('grunt-notify');
 
     // Default task.
     grunt.registerTask('default', ['jshint', 'concat', 'copy']);

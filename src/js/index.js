@@ -1,3 +1,4 @@
+
 (function($) {
     'use strict';
     $.QueryString = (function(a) {
@@ -34,7 +35,7 @@
     });
 
     var defaults = {
-        api: '/api/v1.0/',
+        api: 'http://localhost:8080/api/v1.0/',
         days: 3,
         maxupdates: 24,
         interval: 5 * 1000 * 60 // 5 minutes
@@ -52,16 +53,16 @@
         "Renewable/ Biomass/ Waste": 'lightgreen'
     },
     valid_params = ['minutes', 'days', 'weeks', 'hours', 'months', 'start_time', 'end_time', 'time_start', 'time_end', 'tech', 'fuel', 'type', 'tech_desc', 'fuel_desc'],
-    generators = [],
-        states = [],
-        eventQueue = {
-            actions: [],
-            step: function() {
-                if (this.actions.length) {
-                    this.actions.shift()();
+            generators = [],
+            states = [],
+            eventQueue = {
+                actions: [],
+                step: function() {
+                    if (this.actions.length) {
+                        this.actions.shift()();
+                    }
                 }
-            }
-        },
+            },
     getObjectSize = function(obj) {
         var len = 0, key;
         for (key in obj) {
@@ -78,6 +79,7 @@
         var deferred = $.Deferred();
 
         if (getObjectSize(generators) > 0) {
+            console.log('generators are cached ...');
             deferred.resolve(generators);
         } else {
             $.ajax({
@@ -95,9 +97,9 @@
                     generators[gen.fuel_type][gen.generator_id] = gen;
                 });
 
-                return deferred.resolve(generators);
+                deferred.resolve(generators);
             }).fail(function() {
-                return deferred.reject();
+                deferred.reject();
             });
         }
 
@@ -171,9 +173,10 @@
     function buildStateData(response, i) {
 
         var build_start_time = new Date().getTime(),
-            series = [];
+                series = [];
 
         if (!response) {
+            console.error('No response data');
             return;
         }
 
@@ -190,7 +193,7 @@
             _.forIn(fuel_type_gens, function(gen, id) {
                 _.forIn(response.values[id], function(results) {
                     var time = results[0],
-                        value = results[1];
+                            value = results[1];
 
                     times[time] = times[time] ? times[time] + value : value;
 
@@ -207,9 +210,27 @@
         });
 
         console.log(states[i].name, response.duration, new Date().getTime() - build_start_time);
-        return;
 
+    }
 
+    function xhr(i) {
+        var def = $.Deferred();
+
+        // request new data
+        $.ajax({
+            url: states[i].uri.href(),
+            dataType: 'json'
+        }).success(function(response) {
+            //console.log(response);
+            def.resolve(response);
+        }).fail(function(err) {
+            // ruhroh
+            //console.error(err);
+            def.reject(err);
+            //return err;
+        });
+
+        return def.promise();
     }
 
     $doc.on('nem.get_chart_data', function(e, options, i) {
@@ -224,19 +245,17 @@
         states[i].uri.setQuery(options);
 
         // perform request
-        $.when($.ajax({
-            url: states[i].uri.href(),
-            dataType: 'json'
-        }, function(data) {
-            return data;
-        }), getGenerators()).then(function(response) {
+        $.when(xhr(i), getGenerators()).then(function(response, generators) {
+            console.log(i, 'init', response, generators);
 
-            buildStateData(response[0], i);
+            // success handler
+            buildStateData(response, i);
 
             $doc.ready(function() {
-                $doc.trigger('nem.init_state_chart', [i]);
+                $doc.trigger('nem.init_state_chart', [i, response]);
             });
         }, function(e) {
+            // error handler
             console.error('Fetch failed', e);
         });
     });
@@ -264,16 +283,9 @@
         }
 
         // request new data
-        $.ajax({
-            url: states[i].uri.href(),
-            dataType: 'json'
-        }).success(function(response) {
-            // trigger chart update
-            $doc.trigger('nem.update_chart_data_' + i, [response]);
-        }).fail(function(err) {
-            // ruhroh
-            console.error(err);
-        });
+       
+        $doc.trigger('nem.update_chart_data_' + i, [xhr(1)]);
+        
 
         if (--states[i].updates < 1) {
             clearInterval(states[i].interval);
@@ -282,6 +294,7 @@
     });
 
     $doc.on('nem.init_state_chart', function(e, i) {
+        eventQueue.step();
 
         states[i].chart = new Highcharts.Chart({
             title: {
@@ -355,9 +368,9 @@
             }
 
             var times = [],
-                fuel_types = [],
-                data = [],
-                time = moment().calendar();
+                    fuel_types = [],
+                    data = [],
+                    time = moment().calendar();
 
 
 //            initGenerators(response, i, times, fuel_types);
@@ -381,12 +394,18 @@
 
         }.bind(this));
 
-        eventQueue.step();
 
         $('#na_debug').append('<p>' + states[i].name + ': ' + (new Date().getTime() - states[i].time) + 'ms');
     });
 
 
+    $doc.on('nem.error_init_chart', function(e, i, err) {
+        if (err) {
+            $('#' + states[i].ident).html('<p class="error">Error fetching data:' + err.status + ' ' + e.statusText + '</p>');
+        }
+//        console.log(i);
+//        eventQueue.step();
+    });
 
     /**
      *
@@ -441,7 +460,7 @@
      */
     function parseTimeParams(uri, next) {
         var found_interval = false,
-            query = URI.parseQuery(uri.query());
+                query = URI.parseQuery(uri.query());
 
         _.each(time_params, function(interval) {
 
@@ -483,8 +502,8 @@
     function addOrSubtractTime(query, interval, next) {
 
         var start = getTimeObject(query.start_time),
-            end = getTimeObject(query.end_time),
-            operation = next ? 'add' : 'subtract';
+                end = getTimeObject(query.end_time),
+                operation = next ? 'add' : 'subtract';
 
         if (start) {
             // move forwards in time from a fixed start time
@@ -509,13 +528,13 @@
         // Enqueue the building of each start chart
         $('#states .chart').each(function(i) {
             var $this = $(this),
-                options = {},
-                state = {
-                    name: $this.attr('data-name'),
-                    ident: $this.attr('id'),
-                    series: [],
-                    updates: defaults.maxupdates
-                };
+                    options = {},
+                    state = {
+                        name: $this.attr('data-name'),
+                        ident: $this.attr('id'),
+                        series: [],
+                        updates: defaults.maxupdates
+                    };
 
             // Check for valid query parameters
             $.each(valid_params, function(i, k) {
@@ -541,7 +560,7 @@
 
         });
 
-        
+
 
         // Initiate the queue
         eventQueue.step();
@@ -562,7 +581,7 @@
             e.preventDefault();
 
             var uri = new URI(),
-                hash = this.hash.substring(1).split('-');
+                    hash = this.hash.substring(1).split('-');
 
             uri.normalize();
 
@@ -605,4 +624,4 @@
         });
     });
 }(jQuery, URI, moment, this)
-    );
+        );
