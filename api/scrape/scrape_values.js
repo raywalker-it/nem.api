@@ -309,14 +309,12 @@
 
                 if (!err) {
                     links = $.makeArray($("pre a[href$=zip]"));
-                    console.log(links.length + ' .zip files to process');
                     if (archive_mode && reverse) {
                         links.reverse();
                     }
                     deferred.resolve(links);
                 } else {
-                    console.log(err);
-                    deferred.reject();
+                    deferred.reject(err);
                 }
             }
         });
@@ -393,31 +391,37 @@
                         admzip = new AdmZip(zip);
                     } catch (e) {
                         // Error parsing zip file
-                        dbg('ERROR opening ' + file_uri);
                         deferred.reject(e);
                         return;
                     }
 
                     entries = admzip.getEntries();
+
                     if (entries.length > 1) {
                         verb('Archive file, length ' + entries.length);
                         // Archive of zips
                         // So extract to a temporary dir
                         try {
+                            // Make temporary directory, prefixed with nem_archive_
                             temp.mkdir('nem_archive_', function (err, dir) {
+
                                 verb('\nUsing temporary directory: ' + dir);
+
                                 try {
                                     admzip.extractAllTo(dir, true);
                                 } catch (e) {
+                                    // Error extracting zip file contents
                                     console.error(e);
                                     deferred.reject(e);
                                     return false;
                                 }
 
+                                // Read the contents of the extracted directory
                                 fs.readdir(dir, function (err, files) {
                                     if (err) {
                                         throw err;
                                     }
+                                    // All good, resolve the promise
                                     deferred.resolve([files, dir]);
                                 });
                             });
@@ -829,6 +833,7 @@
 
             var i = 0,
                 skip = 0,
+                errors = 0,
                 length = response.length,
                 processResponse = function () {
 
@@ -856,22 +861,27 @@
 
                                 //
                                 return fetchZipFile(href, i).then(function () {
-
                                     i++;
 
+                                    return processResponse();
+                                }, function () {
+                                    errors++;
+                                    dbg('REJECTED ' + href);
                                     return processResponse();
                                 });
 
                             } else {
                                 skip++;
                                 return processResponse();
-
                             }
 
+                        }, function (err) {
+                            console.error('REJECTED checkNewData()', err);
+                            return processResponse();
                         });
                 },
                 endProcessing = function () {
-                    console.log('\nFinished processing ', i, 'of', length, 'items\n', skip, 'skipped.');
+                    console.log('\nFinished processing ', i, 'of', length, 'items\n', skip, 'skipped, ', errors, 'errors.');
                     return done();
                 };
 

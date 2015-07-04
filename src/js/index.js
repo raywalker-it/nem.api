@@ -1,28 +1,4 @@
 
-(function($) {
-    'use strict';
-    $.QueryString = (function(a) {
-        if (a === "") {
-            return {};
-        }
-        var b = {};
-
-        for (var i = 0; i < a.length; ++i)
-
-        {
-            var p = a[i].split('=');
-            if (p.length !== 2) {
-                continue;
-            }
-            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
-        }
-
-        return b;
-
-    })(window.location.search.substr(1).split('&'));
-})(jQuery);
-
-
 (function($, URI, moment, global) {
     'use strict';
 
@@ -53,16 +29,16 @@
         "Renewable/ Biomass/ Waste": 'lightgreen'
     },
     valid_params = ['minutes', 'days', 'weeks', 'hours', 'months', 'start_time', 'end_time', 'time_start', 'time_end', 'tech', 'fuel', 'type', 'tech_desc', 'fuel_desc'],
-            generators = [],
-            states = [],
-            eventQueue = {
-                actions: [],
-                step: function() {
-                    if (this.actions.length) {
-                        this.actions.shift()();
-                    }
-                }
-            },
+    generators = [],
+    states = [],
+    eventQueue = {
+        actions: [],
+        step: function() {
+            if (this.actions.length) {
+                this.actions.shift()();
+            }
+        }
+    },
     getObjectSize = function(obj) {
         var len = 0, key;
         for (key in obj) {
@@ -75,6 +51,18 @@
 
     var time_params = ['minutes', 'hours', 'days', 'weeks', 'months'];
 
+    /**
+     * Return string with the API and path. Cleans trailing slash
+     * @param path Optional, defaults to ''
+     * @returns {string}
+     */
+    function getApi(path) {
+        if (!path) {
+            path = '';
+        }
+        return config.api.replace(/\/?$/, '/') + path;
+    }
+
     function getGenerators() {
         var deferred = $.Deferred();
 
@@ -83,7 +71,7 @@
             deferred.resolve(generators);
         } else {
             $.ajax({
-                url: defaults.api + 'generators',
+                url: getApi('generators'),
                 dataType: 'json'
             }).success(function(data) {
                 // store generators by fuel type
@@ -153,6 +141,13 @@
 //        });
 //    }
 
+    /**
+     *
+     * @param fuel_types
+     * @param series
+     * @param times
+     * @param i
+     */
     function addToSeries(fuel_types, series, times, i) {
         _.forIn(fuel_types, function(fuel_type, index) {
             if (!series[index]) {
@@ -191,6 +186,7 @@
             };
             // foreach fuel_type generator
             _.forIn(fuel_type_gens, function(gen, id) {
+                // for each generator of type listed in
                 _.forIn(response.values[id], function(results) {
                     var time = results[0],
                             value = results[1];
@@ -239,7 +235,7 @@
         states[i].time = new Date().getTime();
 
         // store the uri for use in updates
-        states[i].uri = new URI(defaults.api + 'values');
+        states[i].uri = new URI(getApi('values'));
 
         // add relevant query string options
         states[i].uri.setQuery(options);
@@ -262,7 +258,7 @@
 
     $doc.on('nem.fetch_new_chart_data', function(e, i) {
 
-        var interval_minutes = defaults.interval / 1000 / 60;
+        var interval_minutes = config.interval / 1000 / 60;
 
         // remove all time parameters from this state URI
         states[i].uri = removeTimeParamsExcept(false, states[i].uri);
@@ -301,7 +297,7 @@
                 text: "Aggregate Power Generation by Fuel Type in " + states[i].name
             },
             chart: {
-                defaultSeriesType: 'areaspline',
+                type: 'area',
                 zoomType: 'x',
                 renderTo: states[i].ident,
                 events: {
@@ -310,7 +306,7 @@
 
                             states[i].interval = setInterval(function() {
                                 $doc.trigger('nem.fetch_new_chart_data', [i]);
-                            }, defaults.interval);
+                            }, config.interval);
                         }
                     }
                 }
@@ -408,7 +404,7 @@
     });
 
     /**
-     *
+     * Cleans a URI of all time parameters except first argument
      * @param {string} interval
      * @param {Object} uri
      * @returns {URI}
@@ -454,13 +450,13 @@
     /**
      * Parse query string for valid time parameters
      *
-     * @param {type} uri
-     * @param {type} next
+     * @param string uri
+     * @param boolean next True if we are moving to the next page
      * @returns {undefined}
      */
     function parseTimeParams(uri, next) {
         var found_interval = false,
-                query = URI.parseQuery(uri.query());
+            query = URI.parseQuery(uri.query());
 
         _.each(time_params, function(interval) {
 
@@ -484,7 +480,7 @@
 
         if (!found_interval) {
             // No interval found in the uri, so use default: n 'days'
-            query.days = defaults.days;
+            query.days = config.days;
 
             addOrSubtractTime(query, 'days', next);
 
@@ -523,8 +519,10 @@
 
     }
 
+    $.extend(true, config, defaults);
 
     $(global.document).ready(function() {
+
         // Enqueue the building of each start chart
         $('#states .chart').each(function(i) {
             var $this = $(this),
@@ -533,7 +531,7 @@
                         name: $this.attr('data-name'),
                         ident: $this.attr('id'),
                         series: [],
-                        updates: defaults.maxupdates
+                        updates: config.maxupdates
                     };
 
             // Check for valid query parameters
@@ -543,9 +541,10 @@
                     options[k] = val;
                 }
             });
+
             // If no interval specified, use the default
             if (!options['days'] && !options['hours'] && !options['weeks'] && !options['months']) {
-                options['days'] = defaults.days;
+                options['days'] = config.days;
             }
 
             // Specify which state to enqueue
@@ -567,7 +566,7 @@
 
         if ($.QueryString['live']) {
             $('nav .live').addClass('active');
-            $('#dashboard section p').first().text('Updating every ' + defaults.interval / 60 / 1000 + ' minutes');
+            $('#dashboard section p').first().text('Updating every ' + config.interval / 60 / 1000 + ' minutes');
 
             if ($.QueryString['start_time'] || $.QueryString['time_start'] || $.QueryString['end_time'] || $.QueryString['time_end']) {
                 config.updatefromnow = false;
@@ -590,6 +589,7 @@
             switch (hash[0]) {
                 case 'page':
 
+                    // @todo describe 'next' behaviour here
                     parseTimeParams(uri, hash[1] === 'next' ? true : false);
 
                     break;

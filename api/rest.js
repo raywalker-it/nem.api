@@ -22,151 +22,151 @@
  * THE SOFTWARE.
  */
 
-(function() {
-  'use strict';
+(function () {
+    'use strict';
 
-  var fs = require('fs'),
-    path = require('path'),
-    user = require(path.resolve(__dirname, 'user.js')),
-    config;
+    var fs = require('fs'),
+        path = require('path'),
+        user = require(path.resolve(__dirname, 'user.js')),
+        config;
 
-  // Load configuration
-  try {
-    config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json'), 'utf-8'));
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
-  }
+    // Load configuration
+    try {
+        config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json'), 'utf-8'));
+    } catch (err) {
+        console.error(err);
+        process.exit(1);
+    }
 
-  user.privileges(config.user, config.group);
+    user.privileges(config.user, config.group);
 
-  var sqlite3 = require('sqlite3');
+    var sqlite3 = require('sqlite3');
 
-  // If no database file was passed in command line parameters
-  // Use configured database file
-  var database_file = config.db.sqlite;
+    // If no database file was passed in command line parameters
+    // Use configured database file
+    var database_file = config.db.sqlite;
 
-  if (!database_file) {
-    console.error('Database is not defined, exiting');
-    process.exit(1);
-  }
+    if (!database_file) {
+        console.error('Database is not defined, exiting');
+        process.exit(1);
+    }
 
-  if (database_file.indexOf('/') !== 0 && database_file.indexOf('..') !== 0) {
-    // not an absolute path, assume it's relative to the config file
-    database_file = path.resolve(__dirname, database_file);
-  }
+    if (database_file.indexOf('/') !== 0 && database_file.indexOf('..') !== 0) {
+        // not an absolute path, assume it's relative to the config file
+        database_file = path.resolve(__dirname, database_file);
+    }
 
-  var name = config.name,
-    restify = require('restify'),
-    server = config.ssl.enabled ? restify.createServer({
-      certificate: config.ssl.certificate,
-      key: config.ssl.key
-    }) : restify.createServer({name: name}),
-    database = new sqlite3.cached.Database(database_file),
-    db = require('./v1.0/db.js'),
-    chalk = require('chalk'),
-    good = chalk.green,
-    warn = chalk.yellow,
-    bad = chalk.red,
-    _s = require('underscore.string');
+    var name = config.name,
+        restify = require('restify'),
+        server = config.ssl.enabled ? restify.createServer({
+            certificate: config.ssl.certificate,
+            key: config.ssl.key
+        }) : restify.createServer({name: name}),
+        database = new sqlite3.cached.Database(database_file),
+        db = require('./v1.0/db.js'),
+        chalk = require('chalk'),
+        good = chalk.green,
+        warn = chalk.yellow,
+        bad = chalk.red,
+        _s = require('underscore.string');
 
-  database.on('profile', function(sql, time) {
-    console.log((function(time) {
-      if (time < db.times.good) {
-        return good(_s.lpad(time, 5));
-      }
-      if (time < db.times.warn) {
-        return warn(_s.lpad(time, 5));
-      }
-      return bad(_s.lpad(time, 5));
-    }(time)), sql);
-  });
+    database.on('profile', function (sql, time) {
+        console.log((function (time) {
+            if (time < db.times.good) {
+                return good(_s.lpad(time, 5));
+            }
+            if (time < db.times.warn) {
+                return warn(_s.lpad(time, 5));
+            }
+            return bad(_s.lpad(time, 5));
+        }(time)), sql);
+    });
 
-//setup cors
-restify.CORS.ALLOW_HEADERS.push('accept');
-restify.CORS.ALLOW_HEADERS.push('sid');
-restify.CORS.ALLOW_HEADERS.push('lang');
-restify.CORS.ALLOW_HEADERS.push('origin');
-restify.CORS.ALLOW_HEADERS.push('withcredentials');
-restify.CORS.ALLOW_HEADERS.push('x-requested-with');
+    //setup cors
+    restify.CORS.ALLOW_HEADERS.push('accept');
+    restify.CORS.ALLOW_HEADERS.push('sid');
+    restify.CORS.ALLOW_HEADERS.push('lang');
+    restify.CORS.ALLOW_HEADERS.push('origin');
+    restify.CORS.ALLOW_HEADERS.push('withcredentials');
+    restify.CORS.ALLOW_HEADERS.push('x-requested-with');
 
-  db.init(database, config).then(function() {
-    var default_api = require(path.resolve(__dirname, 'v' + config.defaults.version, 'api.js'));
+    db.init(database, config).then(function () {
+        var default_api = require(path.resolve(__dirname, 'v' + config.defaults.version, 'api.js'));
 
-    server.use(restify.CORS());
+        server.use(restify.CORS());
 
-    server.use(restify.queryParser());
+        server.use(restify.queryParser());
 
-    server.use(restify.jsonp());
+        server.use(restify.jsonp());
 
 //        server.use(restify.gzipResponse());
 
-    server.get(/^\/(?:api\/)?([v0-9\.]+)\/([\w]+)\/?([\w]+)?\/?([\w]+)?\/?([\w]+)?/, function(req, res, next) {
-      var api;
+        server.get(/^\/(?:api\/)?([v0-9\.]+)\/([\w]+)\/?([\w]+)?\/?([\w]+)?\/?([\w]+)?/, function (req, res, next) {
+            var api;
 
-      console.log(chalk.bold(req.connection.remoteAddress), ' ', chalk.underline(req.url));
+            console.log(chalk.bold(req.connection.remoteAddress), ' ', chalk.underline(req.url));
 
-      try {
-        if (req.params[0] !== config.defaults.version) {
-          api = require(path.resolve(__dirname, req.params[0], 'api.js'));
-        } else {
-          api = default_api;
-        }
-      } catch (err) {
-        res.send(404, {error: 'Version not found - ' + req.params[0]});
-        return next();
-      }
+            try {
+                if (req.params[0] !== config.defaults.version) {
+                    api = require(path.resolve(__dirname, req.params[0], 'api.js'));
+                } else {
+                    api = default_api;
+                }
+            } catch (err) {
+                res.send(404, {error: 'Version not found - ' + req.params[0]});
+                return next();
+            }
 
-      switch (req.params[1]) {
-        case 'values':
-          return api.values(db, req, res, next);
+            switch (req.params[1]) {
+                case 'values':
+                    return api.values(db, req, res, next);
 
-          // aggregate is a whole different kettle of fish
-        case 'aggregate':
-          return api.aggregate(req.params[1], res, next);
+                // aggregate is a whole different kettle of fish
+                case 'aggregate':
+                    return api.aggregate(req.params[1], res, next);
 
-        case 'generators':
-          return api.generators(db, req, res, next);
+                case 'generators':
+                    return api.generators(db, req, res, next);
 
-        default:
-          res.send(404, {error: "Please specify a valid route"});
-          next();
-      }
-    });
-
-    server.get(/^\/(?:api)?\/?([v0-9\.]+\/?)?/, function(req, res, next) {
-      var api;
-
-      if (!req.params[0]) {
-        res.send({
-          error: "Please specify an API version, eg /api/v" + config.defaults.version + '/'
+                default:
+                    res.send(404, {error: "Please specify a valid route"});
+                    next();
+            }
         });
 
-        return next();
-      }
+        server.get(/^\/(?:api)?\/?([v0-9\.]+\/?)?/, function (req, res, next) {
+            var api;
 
-      try {
-        if (req.params[0] && req.params[0] !== config.defaults.version) {
-          api = require(path.resolve(__dirname, req.params[0], 'api.js'));
-        }
-      } catch (err) {
-        res.send(404, {error: 'Version not found - ' + req.params[0]});
-        return next();
-      }
+            if (!req.params[0]) {
+                res.send({
+                    error: "Please specify an API version, eg /api/v" + config.defaults.version + '/'
+                });
 
-      res.send({
-        hello: "You're now talking to the " + config.name,
-        version: req.params[0].replace('/', '')
-      });
+                return next();
+            }
 
-      next();
+            try {
+                if (req.params[0] && req.params[0] !== config.defaults.version) {
+                    api = require(path.resolve(__dirname, req.params[0], 'api.js'));
+                }
+            } catch (err) {
+                res.send(404, {error: 'Version not found - ' + req.params[0]});
+                return next();
+            }
+
+            res.send({
+                hello: "You're now talking to the " + config.name,
+                version: req.params[0].replace('/', '')
+            });
+
+            next();
+        });
+
+
+        server.listen(config.listen.port, config.listen.host, function () {
+            console.log('\n%s listening at %s', server.name, server.url, '\n');
+        });
     });
-
-
-    server.listen(config.listen.port, config.listen.host, function() {
-      console.log('\n%s listening at %s', server.name, server.url, '\n');
-    });
-  });
 
 
 }());

@@ -41,6 +41,7 @@ module.exports = function(grunt) {
                     '<%= cfg.bower %>/moment/min/moment.min.js',
                     '<%= cfg.js %>/vendor/jquery.sticky.js',
                     '<%= cfg.js %>/vendor/highcharts-custom.js',
+                    '<%= cfg.js %>/plugins/*.js'
                     //                    '<%= cfg.js %>/vendor/themes/gray.js',
                     //                    '<%= cfg.js %>/vendor/moment.min.js'
                 ],

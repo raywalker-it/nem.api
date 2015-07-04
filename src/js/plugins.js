@@ -2848,3 +2848,26 @@ y.stops||[[0,this.options.minColor],[1,this.options.maxColor]];q(this.stops,func
 w)}return w},tweenColors:function(m,q,w){var B=1!==q.rgba[3]||1!==m.rgba[3];return 0===m.rgba.length||0===q.rgba.length?"none":(B?"rgba(":"rgb(")+Math.round(q.rgba[0]+(m.rgba[0]-q.rgba[0])*(1-w))+","+Math.round(q.rgba[1]+(m.rgba[1]-q.rgba[1])*(1-w))+","+Math.round(q.rgba[2]+(m.rgba[2]-q.rgba[2])*(1-w))+(B?","+(q.rgba[3]+(m.rgba[3]-q.rgba[3])*(1-w)):"")+")"}};m.seriesTypes.solidgauge=m.extendClass(m.seriesTypes.gauge,{type:"solidgauge",bindAxes:function(){var q;m.seriesTypes.gauge.prototype.bindAxes.call(this);
 q=this.yAxis;m.extend(q,S);q.options.dataClasses&&q.initDataClasses(q.options);q.initStops(q.options)},drawPoints:function(){var q=this,C=q.yAxis,B=C.center,N=q.options,u=q.chart.renderer;m.each(q.points,function(z){var O=z.graphic,k=C.startAngleRad+C.translate(z.y,null,null,null,!0),P=w(F(N.radius,100))*B[2]/200,G=w(F(N.innerRadius,60))*B[2]/200,H=C.toColor(z.y,z),D;"none"!==H&&(D=z.color,z.color=H);!1===N.wrap&&(k=Math.max(C.startAngleRad,Math.min(C.endAngleRad,k)));k=180*k/Math.PI;k={x:B[0],y:B[1],
 r:P,innerR:G,start:C.startAngleRad,end:k/(180/Math.PI)};O?(P=k.d,O.attr({fill:z.color}).animate(k,{step:function(k,q){O.attr("fill",S.tweenColors(m.Color(D),m.Color(H),q.pos))}}),k.d=P):z.graphic=u.arc(k).attr({stroke:N.borderColor||"none","stroke-width":N.borderWidth||0,fill:z.color}).add(q.group)})},animate:null})})(Highcharts); 
+
+(function($) {
+    'use strict';
+    $.QueryString = (function(a) {
+        if (a === "") {
+            return {};
+        }
+        var b = {};
+
+        for (var i = 0; i < a.length; ++i)
+
+        {
+            var p = a[i].split('=');
+            if (p.length !== 2) {
+                continue;
+            }
+            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+        }
+
+        return b;
+
+    })(window.location.search.substr(1).split('&'));
+})(jQuery);
