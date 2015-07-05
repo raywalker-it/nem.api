@@ -1,0 +1,29 @@
+name: "NEM API"
+host:
+user:
+group:
+api:
+  version: "1.0"
+  gzip: true
+  listen:
+    host: 127.0.0.1
+    port: 8888
+  ssl:
+    enabled: false
+    certificate:
+    key:
+scrape:
+  current: "http://www.nemweb.com.au/Reports/CURRENT/Dispatch_SCADA/"
+  archive: "http://www.nemweb.com.au/Reports/ARCHIVE/Dispatch_SCADA/"
+db:
+  sqlite: "scada.db"
+  schema: "schema.sql"
+  registration_file: "files/NEM_Registration_and_Exemption_List_latest.csv"
+  pragma:
+    busy_timeout: 60000
+    foreign_keys: "ON"
+    journal_mode: "WAL"
+    synchronous: "0"
+    cache_size: "-1000000"
+    page_size: "65536"
+    temp_store: "MEMORY"
