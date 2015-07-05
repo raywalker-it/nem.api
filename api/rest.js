@@ -25,26 +25,16 @@
 (function () {
     'use strict';
 
-    var fs = require('fs'),
-        path = require('path'),
-        user = require(path.resolve(__dirname, 'user.js')),
-        config;
+    var path = require('path'),
+        user = require('./user.js'),
+        config = require('config');
 
-    // Load configuration
-    try {
-        config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json'), 'utf-8'));
-    } catch (err) {
-        console.error(err);
-        process.exit(1);
-    }
-
-    user.privileges(config.user, config.group);
-
-    var sqlite3 = require('sqlite3');
+    // Run the application as configured user
+    user.privileges(config.get('user'), config.get('group'));
 
     // If no database file was passed in command line parameters
     // Use configured database file
-    var database_file = config.db.sqlite;
+    var database_file = config.get('db.sqlite');
 
     if (!database_file) {
         console.error('Database is not defined, exiting');
@@ -52,23 +42,25 @@
     }
 
     if (database_file.indexOf('/') !== 0 && database_file.indexOf('..') !== 0) {
-        // not an absolute path, assume it's relative to the config file
-        database_file = path.resolve(__dirname, database_file);
+        // not an absolute path, assume it's located in the default directory, ./db
+        database_file = path.resolve(__dirname, 'db', database_file);
     }
 
-    var name = config.name,
-        restify = require('restify'),
-        server = config.ssl.enabled ? restify.createServer({
-            certificate: config.ssl.certificate,
-            key: config.ssl.key
-        }) : restify.createServer({name: name}),
+    var restify = require('restify'),
+        server = config.get('api.ssl.enabled') ? restify.createServer({
+            certificate: config.get('api.ssl.certificate'),
+            key: config.get('api.ssl.key')
+        }) : restify.createServer({name: config.get('name')}),
+        sqlite3 = require('sqlite3'),
         database = new sqlite3.cached.Database(database_file),
-        db = require('./v1.0/db.js'),
+        db = require('./v' + config.get('api.version') + '/db.js'),
         chalk = require('chalk'),
         good = chalk.green,
         warn = chalk.yellow,
         bad = chalk.red,
         _s = require('underscore.string');
+
+    console.log('Using database:', database_file);
 
     database.on('profile', function (sql, time) {
         console.log((function (time) {
@@ -83,15 +75,16 @@
     });
 
     //setup cors
-    restify.CORS.ALLOW_HEADERS.push('accept');
-    restify.CORS.ALLOW_HEADERS.push('sid');
-    restify.CORS.ALLOW_HEADERS.push('lang');
-    restify.CORS.ALLOW_HEADERS.push('origin');
-    restify.CORS.ALLOW_HEADERS.push('withcredentials');
-    restify.CORS.ALLOW_HEADERS.push('x-requested-with');
+    //restify.CORS.ALLOW_HEADERS.push('accept');
+    //restify.CORS.ALLOW_HEADERS.push('sid');
+    //restify.CORS.ALLOW_HEADERS.push('lang');
+    //restify.CORS.ALLOW_HEADERS.push('origin');
+    //restify.CORS.ALLOW_HEADERS.push('withcredentials');
+    //restify.CORS.ALLOW_HEADERS.push('x-requested-with');
 
-    db.init(database, config).then(function () {
-        var default_api = require(path.resolve(__dirname, 'v' + config.defaults.version, 'api.js'));
+    return db.init(database).then(function () {
+
+        var default_api = require(path.resolve(__dirname, 'v' + config.get('api.version'), 'api.js'));
 
         server.use(restify.CORS());
 
@@ -99,7 +92,10 @@
 
         server.use(restify.jsonp());
 
-//        server.use(restify.gzipResponse());
+        if (config.get('api.gzip') === true) {
+            console.log('gzip enabled');
+            server.use(restify.gzipResponse());
+        }
 
         server.get(/^\/(?:api\/)?([v0-9\.]+)\/([\w]+)\/?([\w]+)?\/?([\w]+)?\/?([\w]+)?/, function (req, res, next) {
             var api;
@@ -107,7 +103,7 @@
             console.log(chalk.bold(req.connection.remoteAddress), ' ', chalk.underline(req.url));
 
             try {
-                if (req.params[0] !== config.defaults.version) {
+                if (req.params[0] !== config.get('api.version')) {
                     api = require(path.resolve(__dirname, req.params[0], 'api.js'));
                 } else {
                     api = default_api;
@@ -139,14 +135,14 @@
 
             if (!req.params[0]) {
                 res.send({
-                    error: "Please specify an API version, eg /api/v" + config.defaults.version + '/'
+                    error: "Please specify an API version, eg /api/v" + config.get('api.version') + '/'
                 });
 
                 return next();
             }
 
             try {
-                if (req.params[0] && req.params[0] !== config.defaults.version) {
+                if (req.params[0] && req.params[0] !== config.get('api.version')) {
                     api = require(path.resolve(__dirname, req.params[0], 'api.js'));
                 }
             } catch (err) {
@@ -155,15 +151,14 @@
             }
 
             res.send({
-                hello: "You're now talking to the " + config.name,
+                hello: "You're now talking to the " + config.get('name'),
                 version: req.params[0].replace('/', '')
             });
 
             next();
         });
 
-
-        server.listen(config.listen.port, config.listen.host, function () {
+        return server.listen(config.get('api.listen.port'), config.get('api.listen.host'), function () {
             console.log('\n%s listening at %s', server.name, server.url, '\n');
         });
     });

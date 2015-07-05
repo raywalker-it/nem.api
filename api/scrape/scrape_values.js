@@ -50,7 +50,7 @@
     var fs = require('fs'),
         path = require('path'),
         chalk = require('chalk'),
-        config = false;
+        config = require('config');
 
     (function (args) {
 

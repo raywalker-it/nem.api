@@ -22,33 +22,8 @@
  * THE SOFTWARE.
  */
 
-var warn = require('chalk').yellow,
-    error = require('chalk').red;
-
 module.exports = {
-    privileges: function (user, group) {
-        try {
-            if (user && group) {
-                if (user === 'root' || group === 'root') {
-                    throw new Error('[ERROR] Cowardly refusing to run as superuser');
-                }
-
-                process.setgid(user);
-                process.setuid(group);
-
-                console.log('User: ', user, 'Group: ', group);
-
-            } else {
-
-                if (process.getuid() === 0 || process.getgid() === 0) {
-                    throw new Error('[ERROR] Cowardly refusing to run as superuser');
-                }
-
-                console.warn(warn('[WARNING] User or group not set, continuing as', process.getuid(), process.getgid()));
-            }
-        } catch (err) {
-            console.error(error(err));
-            process.exit(1);
-        }
-    }
+    values: require('./routes/values.js'),
+    aggregate: require('./routes/aggregates.js'),
+    generators:  require('./routes/generators.js')
 };
